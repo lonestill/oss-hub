@@ -1,4 +1,4 @@
-import { GitHubRepoDetails, GitHubIssue } from "./types";
+import { GitHubRepoDetails, GitHubIssue, GitHubRelease } from "./types";
 
 export function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
   const cleaned = input.trim();
@@ -150,4 +150,50 @@ export async function fetchGitHubIssues(owner: string, repo: string): Promise<Gi
     return [];
   }
 }
+
+export async function fetchGitHubReleases(owner: string, repo: string): Promise<GitHubRelease[]> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "OSS-Hub-Platform",
+  };
+
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`, {
+      headers,
+      next: { revalidate: 300 }, // 5 min cache
+    });
+
+    if (!res.ok) {
+      return [];
+    }
+
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id,
+      tag_name: item.tag_name,
+      name: item.name || item.tag_name,
+      body: item.body || "",
+      html_url: item.html_url,
+      published_at: item.published_at || item.created_at,
+      prerelease: Boolean(item.prerelease),
+      author: item.author
+        ? {
+            login: item.author.login,
+            avatar_url: item.author.avatar_url,
+          }
+        : null,
+    }));
+  } catch (err) {
+    console.error(`Failed to fetch releases for ${owner}/${repo}:`, err);
+    return [];
+  }
+}
+
 

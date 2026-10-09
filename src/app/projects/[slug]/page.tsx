@@ -1,6 +1,6 @@
 import { getProjectBySlug, getComments } from "@/lib/projects";
 import { getSession } from "@/lib/auth";
-import { fetchGitHubIssues } from "@/lib/github";
+import { fetchGitHubIssues, fetchGitHubReleases } from "@/lib/github";
 import { notFound } from "next/navigation";
 import { Star, GitFork, AlertCircle, ExternalLink, Globe, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { CommentsSection } from "@/components/CommentsSection";
 import { OwnerControlPanel } from "@/components/OwnerControlPanel";
 import { ProjectIssuesList } from "@/components/ProjectIssuesList";
+import { ProjectDocsTabs } from "@/components/ProjectDocsTabs";
 import { ContributorFastTrack } from "@/components/ContributorFastTrack";
 import { getClaimsByProject, getTeamApplicationsByProject } from "@/lib/claims";
 
@@ -45,11 +46,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
 
   const [owner, repo] = project.full_name.split("/");
-  const [comments, issues, claims, teamApplications] = await Promise.all([
+  const [comments, issues, claims, teamApplications, releases] = await Promise.all([
     getComments(project.id),
     owner && repo ? fetchGitHubIssues(owner, repo) : Promise.resolve([]),
     getClaimsByProject(project.id),
     isOwner || isAdmin ? getTeamApplicationsByProject(project.id) : Promise.resolve([]),
+    owner && repo ? fetchGitHubReleases(owner, repo) : Promise.resolve([]),
   ]);
 
   return (
@@ -247,29 +249,14 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 
       {/* Grid: README & Comments */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* README Section (Left 2 columns) */}
+        {/* Docs & Changelog Section (Left 2 columns) */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-6 sm:p-8">
-            <div className="border-b border-[#1d212b] pb-4 mb-6 flex items-center justify-between text-xs text-[#8a92a3]">
-              <span className="text-white font-semibold">README.md</span>
-              <a
-                href={`${project.url}#readme`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
-              >
-                Исходник на GitHub ↗
-              </a>
-            </div>
-
-            {project.readme ? (
-              <MarkdownViewer content={project.readme} repoFullName={project.full_name} />
-            ) : (
-              <div className="py-12 text-center text-[#8a92a3] text-xs">
-                README отсутствует или пуст
-              </div>
-            )}
-          </div>
+          <ProjectDocsTabs
+            readmeContent={project.readme}
+            releases={releases}
+            repoFullName={project.full_name}
+            repoUrl={project.url}
+          />
         </div>
 
         {/* Discussions Section (Right 1 column) */}

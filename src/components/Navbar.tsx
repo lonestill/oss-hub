@@ -44,6 +44,12 @@ export async function Navbar() {
             >
               Руководство
             </Link>
+            <Link
+              href="/changelog"
+              className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
+            >
+              Changelog
+            </Link>
           </nav>
         </div>
 

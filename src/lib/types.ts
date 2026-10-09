@@ -129,3 +129,17 @@ export interface GitHubIssue {
   body?: string;
 }
 
+export interface GitHubRelease {
+  id: number;
+  tag_name: string;
+  name: string | null;
+  body: string | null;
+  html_url: string;
+  published_at: string;
+  prerelease: boolean;
+  author: {
+    login: string;
+    avatar_url: string;
+  } | null;
+}
+
