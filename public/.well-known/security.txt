@@ -1,0 +1,8 @@
+Contact: https://t.me/lonestill
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: ru, en
+Canonical: https://oss-hub-nu.vercel.app/.well-known/security.txt
+Policy: https://oss-hub-nu.vercel.app/
+Acknowledgments: https://t.me/lonestill
+
+# Нашёл уязвимость или 0day? Не ломай прод — напиши @lonestill в Telegram.
