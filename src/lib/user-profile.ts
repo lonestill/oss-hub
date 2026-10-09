@@ -216,3 +216,104 @@ export function calculateUserBadges(params: {
     },
   ];
 }
+
+export interface DeveloperProfile {
+  login: string;
+  name: string;
+  avatar: string | null;
+  status: "open" | "mentor" | "busy" | "maintainer";
+  status_text: string | null;
+  preferred_stack: string[];
+  hours_per_week: string | null;
+  telegram: string | null;
+  projects_count: number;
+  stars_count: number;
+  claims_count: number;
+}
+
+export async function getAllContributors(options?: {
+  stack?: string;
+  status?: string;
+  search?: string;
+}): Promise<DeveloperProfile[]> {
+  await initDb();
+  const q = `
+    SELECT 
+      u.login,
+      COALESCE(up.status, CASE WHEN COUNT(DISTINCT p.id) > 0 THEN 'maintainer' ELSE 'open' END) as status,
+      up.status_text,
+      up.preferred_stack,
+      up.hours_per_week,
+      up.telegram,
+      COALESCE(MAX(p.owner_avatar), MAX(tc.user_avatar)) as avatar,
+      COALESCE(MAX(tc.user_name), u.login) as name,
+      COUNT(DISTINCT p.id) as projects_count,
+      COALESCE(SUM(p.stars), 0) as stars_count,
+      COUNT(DISTINCT tc.id) as claims_count,
+      GROUP_CONCAT(DISTINCT p.language) as project_languages
+    FROM (
+      SELECT login FROM user_profiles
+      UNION
+      SELECT owner_login as login FROM projects WHERE owner_login IS NOT NULL
+      UNION
+      SELECT user_login as login FROM task_claims WHERE user_login IS NOT NULL
+    ) u
+    LEFT JOIN user_profiles up ON LOWER(u.login) = LOWER(up.login)
+    LEFT JOIN projects p ON LOWER(u.login) = LOWER(p.owner_login)
+    LEFT JOIN task_claims tc ON LOWER(u.login) = LOWER(tc.user_login)
+    GROUP BY u.login
+    ORDER BY 
+      CASE WHEN up.status = 'open' THEN 1 WHEN up.status = 'mentor' THEN 2 WHEN up.status = 'maintainer' THEN 3 ELSE 4 END ASC,
+      up.updated_at DESC,
+      projects_count DESC
+  `;
+
+  const res = await client.execute(q);
+  let devs: DeveloperProfile[] = res.rows.map((row) => {
+    const rawStack = row.preferred_stack ? String(row.preferred_stack) : "";
+    const rawProjLangs = row.project_languages ? String(row.project_languages) : "";
+    const combined = `${rawStack},${rawProjLangs}`
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && s !== "null");
+    const uniqueStack = Array.from(new Set(combined));
+
+    return {
+      login: String(row.login),
+      name: row.name ? String(row.name) : String(row.login),
+      avatar: row.avatar ? String(row.avatar) : null,
+      status: (row.status as any) || "open",
+      status_text: row.status_text ? String(row.status_text) : null,
+      preferred_stack: uniqueStack,
+      hours_per_week: row.hours_per_week ? String(row.hours_per_week) : null,
+      telegram: row.telegram ? String(row.telegram) : null,
+      projects_count: Number(row.projects_count || 0),
+      stars_count: Number(row.stars_count || 0),
+      claims_count: Number(row.claims_count || 0),
+    };
+  });
+
+  if (options?.status && options.status !== "all") {
+    devs = devs.filter((d) => d.status.toLowerCase() === options.status!.toLowerCase());
+  }
+
+  if (options?.stack && options.stack !== "all") {
+    devs = devs.filter((d) =>
+      d.preferred_stack.some((s) => s.toLowerCase().includes(options.stack!.toLowerCase()))
+    );
+  }
+
+  if (options?.search) {
+    const s = options.search.toLowerCase();
+    devs = devs.filter(
+      (d) =>
+        d.login.toLowerCase().includes(s) ||
+        d.name.toLowerCase().includes(s) ||
+        (d.status_text && d.status_text.toLowerCase().includes(s)) ||
+        d.preferred_stack.some((st) => st.toLowerCase().includes(s))
+    );
+  }
+
+  return devs;
+}
+
