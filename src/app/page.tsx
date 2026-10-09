@@ -1,4 +1,4 @@
-import { getProjects } from "@/lib/projects";
+import { getProjects, getAvailableLanguages } from "@/lib/projects";
 import { ProjectCard } from "@/components/ProjectCard";
 import { SearchFilters } from "@/components/SearchFilters";
 import { Plus, FolderGit2, Skull, Terminal, ExternalLink, ArrowRight } from "lucide-react";
@@ -76,12 +76,15 @@ export default async function HomePage({ searchParams }: PageProps) {
   const sort = params.sort || "stars";
   const lookingForContributors = params.looking === "true";
 
-  const projects = await getProjects({
-    search: search || undefined,
-    language: language || undefined,
-    sort,
-    lookingForContributors,
-  });
+  const [projects, availableLanguages] = await Promise.all([
+    getProjects({
+      search: search || undefined,
+      language: language || undefined,
+      sort,
+      lookingForContributors,
+    }),
+    getAvailableLanguages(),
+  ]);
 
   const totalProjects = projects.length;
   const lookingCount = projects.filter((p) => p.looking_for_contributors).length;
@@ -184,6 +187,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             activeLanguage={language}
             activeSort={sort}
             lookingOnly={lookingForContributors}
+            availableLanguages={availableLanguages}
           />
         </Suspense>
 

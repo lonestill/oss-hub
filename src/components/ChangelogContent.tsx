@@ -8,6 +8,7 @@ import {
   Shield,
   Wrench,
   Filter,
+  GitCommit,
 } from "lucide-react";
 import Link from "next/link";
 import { CHANGELOG_DATA } from "@/lib/changelog-data";
@@ -138,15 +139,30 @@ export function ChangelogContent() {
 
               {/* Version Header Card */}
               <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-5 sm:p-6 space-y-4 shadow-lg">
-                <div className="flex items-center gap-2.5 flex-wrap border-b border-[#1d212b] pb-3">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border ${release.badgeColor}`}
-                  >
-                    {release.scope}
-                  </span>
-                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                    {release.title}
-                  </h2>
+                <div className="flex items-center justify-between gap-2.5 flex-wrap border-b border-[#1d212b] pb-3">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border ${release.badgeColor}`}
+                    >
+                      {release.scope}
+                    </span>
+                    <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                      {release.title}
+                    </h2>
+                  </div>
+
+                  {release.commit && (
+                    <a
+                      href={`https://github.com/lonestill/oss-hub/commit/${release.commit}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[#161a23] hover:bg-[#1f2432] text-[#8a92a3] hover:text-white border border-[#1d212b] hover:border-[#2e3444] transition-colors"
+                      title={`Коммит ${release.commit} на GitHub`}
+                    >
+                      <GitCommit className="w-3.5 h-3.5 text-[#e5484d]" />
+                      <span>{release.commit}</span>
+                    </a>
+                  )}
                 </div>
 
                 <p className="text-xs sm:text-sm text-[#8a92a3] leading-relaxed">

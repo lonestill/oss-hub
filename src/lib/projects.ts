@@ -2,6 +2,7 @@ import { client, initDb } from "./db";
 import { Project, Comment } from "./types";
 import { fetchGitHubRepo, parseGitHubUrl } from "./github";
 import { analyzeRepository } from "./moderation";
+import { parseSearchQuery } from "./search-query";
 
 function getDefaultQuickstart(full_name: string, name: string, language: string | null): string {
   const lang = (language || "").toLowerCase();
@@ -122,6 +123,22 @@ export function mapProjectRow(row: any): Project {
 
 }
 
+export async function getAvailableLanguages(): Promise<string[]> {
+  await initDb();
+  const result = await client.execute({
+    sql: `
+      SELECT DISTINCT language 
+      FROM projects 
+      WHERE language IS NOT NULL AND length(trim(language)) > 0
+      ORDER BY language COLLATE NOCASE ASC
+    `,
+    args: [],
+  });
+  return result.rows
+    .map((r) => String(r.language || "").trim())
+    .filter(Boolean);
+}
+
 export async function getProjects(options?: {
   search?: string;
   language?: string;
@@ -147,19 +164,49 @@ export async function getProjects(options?: {
     query += ` AND (p.moderation_status = 'approved' OR p.moderation_status IS NULL)`;
   }
 
-  if (options?.search) {
+  const parsed = options?.search ? parseSearchQuery(options.search) : null;
+  const effectiveLanguage = options?.language || parsed?.language;
+  const effectiveLooking = Boolean(options?.lookingForContributors || parsed?.isLooking);
+
+  if (parsed?.cleanText) {
     query += ` AND (p.name LIKE ? OR p.description LIKE ? OR p.topics LIKE ? OR p.full_name LIKE ?)`;
-    const s = `%${options.search}%`;
+    const s = `%${parsed.cleanText}%`;
     args.push(s, s, s, s);
   }
 
-  if (options?.language) {
+  if (effectiveLanguage) {
     query += ` AND LOWER(p.language) = LOWER(?)`;
-    args.push(options.language);
+    args.push(effectiveLanguage);
   }
 
-  if (options?.lookingForContributors) {
+  if (effectiveLooking) {
     query += ` AND p.looking_for_contributors = 1`;
+  }
+
+  if (parsed?.owner) {
+    query += ` AND LOWER(p.owner_login) = LOWER(?)`;
+    args.push(parsed.owner);
+  }
+
+  if (parsed?.stars) {
+    const op = parsed.stars.operator;
+    if (op === ">" || op === ">=" || op === "<" || op === "<=" || op === "=") {
+      query += ` AND p.stars ${op} ?`;
+      args.push(parsed.stars.value);
+    }
+  }
+
+  if (parsed?.forks) {
+    const op = parsed.forks.operator;
+    if (op === ">" || op === ">=" || op === "<" || op === "<=" || op === "=") {
+      query += ` AND p.forks ${op} ?`;
+      args.push(parsed.forks.value);
+    }
+  }
+
+  if (parsed?.topic) {
+    query += ` AND LOWER(p.topics) LIKE ?`;
+    args.push(`%${parsed.topic.toLowerCase()}%`);
   }
 
   query += ` GROUP BY p.id`;
@@ -176,6 +223,7 @@ export async function getProjects(options?: {
   const result = await client.execute({ sql: query, args });
   return result.rows.map(mapProjectRow);
 }
+
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   await initDb();

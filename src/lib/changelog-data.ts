@@ -4,6 +4,7 @@ export interface ChangelogItem {
   badgeColor: string;
   title: string;
   summary: string;
+  commit?: string;
   sections: {
     title: string;
     type: "feat" | "fix" | "refactor" | "security";
@@ -16,6 +17,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
     version: "Даже писать стыдно",
     scope: "Даже писать стыдно",
     badgeColor: "bg-[#8a92a3]/10 text-[#8a92a3] border-[#8a92a3]/20",
+    commit: "2c5cbfb",
     title: "Выпил ссылок на релизы и хардкода админа",
     summary:
       "Убрали даты, снесли лишнюю кнопку релизов и перевели проверку админки на честную таблицу в базе данных вместо захардкоженного ника.",
@@ -44,6 +46,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
     version: "Микрофикс",
     scope: "Микрофикс",
     badgeColor: "bg-[#3fb950]/10 text-[#3fb950] border-[#3fb950]/30",
+    commit: "8500e50",
     title: "Починили статус отклонённых и снятых задач",
     summary:
       "Задачи больше не висят как занятые, если клейм отклонён мейнтейнером или снят самим исполнителем.",
@@ -63,6 +66,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
     version: "Важный апдейт",
     scope: "Важный апдейт",
     badgeColor: "bg-[#e5484d]/10 text-[#e5484d] border-[#e5484d]/30",
+    commit: "a451288",
     title: "Полноэкранный воркспейс Maintainer CRM и база знаний",
     summary:
       "Канбан-доска для авторов репозиториев, встроенный чат треда задачи, бэклог ручных задач, вакансии и интерактивное руководство.",
@@ -93,6 +97,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
     version: "Минорный апдейт",
     scope: "Минорный апдейт",
     badgeColor: "bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/30",
+    commit: "8500e50",
     title: "Центр контрибуции и комплекс защиты",
     summary:
       "Бронирование задач с питчем решения, прикрепление GitHub PR, скользящий rate limiting и защита от сканеров.",
@@ -123,6 +128,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
     version: "Важный апдейт",
     scope: "Важный апдейт",
     badgeColor: "bg-[#e5484d]/10 text-[#e5484d] border-[#e5484d]/30",
+    commit: "bd8ed8b",
     title: "Публичный релиз платформы OSS Hub",
     summary:
       "Каталог репозиториев, GitHub OAuth авторизация, профили разработчиков и тёмная инженерная дизайн-система.",
