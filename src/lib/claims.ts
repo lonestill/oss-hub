@@ -149,6 +149,33 @@ export async function getClaimsByUser(userLogin: string): Promise<TaskClaim[]> {
   }));
 }
 
+export async function getClaimById(claimId: string): Promise<TaskClaim | null> {
+  await initDb();
+  const result = await client.execute({
+    sql: `SELECT * FROM task_claims WHERE id = ? LIMIT 1`,
+    args: [claimId],
+  });
+
+  const row = result.rows[0];
+  if (!row) return null;
+
+  return {
+    id: String(row.id),
+    project_id: String(row.project_id),
+    project_slug: String(row.project_slug),
+    issue_number: Number(row.issue_number),
+    issue_title: String(row.issue_title),
+    user_login: String(row.user_login),
+    user_name: row.user_name ? String(row.user_name) : null,
+    user_avatar: row.user_avatar ? String(row.user_avatar) : null,
+    pitch: String(row.pitch),
+    status: (row.status as any) || "pending",
+    pr_url: row.pr_url ? String(row.pr_url) : null,
+    created_at: Number(row.created_at),
+    updated_at: Number(row.updated_at),
+  };
+}
+
 export async function updateClaimStatus(
   claimId: string,
   status: "pending" | "assigned" | "completed" | "rejected",
@@ -168,6 +195,15 @@ export async function updateClaimStatus(
       args: [status, now, claimId],
     });
   }
+}
+
+export async function cancelTaskClaim(claimId: string): Promise<void> {
+  await initDb();
+  const now = Date.now();
+  await client.execute({
+    sql: `UPDATE task_claims SET status = 'rejected', updated_at = ? WHERE id = ?`,
+    args: [now, claimId],
+  });
 }
 
 export async function addTaskMessage(params: {

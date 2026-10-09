@@ -15,6 +15,7 @@ import {
   applyToTeamAction,
   sendTaskMessageAction,
   updateClaimStatusAction,
+  cancelClaimAction,
   getTaskMessagesAction,
 } from "@/app/actions";
 import {
@@ -31,6 +32,7 @@ import {
   GitPullRequest,
   CheckCircle2,
   X,
+  UserX,
   Code2,
   FileCode,
   Shield,
@@ -91,6 +93,7 @@ export function ContributorFastTrack({
   const [newPrUrl, setNewPrUrl] = useState("");
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isCancelingClaim, setIsCancelingClaim] = useState(false);
 
   // Quickstart command
   const quickstart =
@@ -251,6 +254,22 @@ export function ContributorFastTrack({
     setIsSendingMessage(false);
   }
 
+  async function handleCancelClaim() {
+    if (!activeDiscussionClaim) return;
+    const confirmed = window.confirm("Вы уверены, что хотите снять свою заявку и отказаться от задачи?");
+    if (!confirmed) return;
+
+    setIsCancelingClaim(true);
+    try {
+      await cancelClaimAction(activeDiscussionClaim.id, project.slug);
+      setActiveDiscussionClaim(null);
+    } catch (err) {
+      console.error("Failed to cancel claim:", err);
+    } finally {
+      setIsCancelingClaim(false);
+    }
+  }
+
   async function handleAttachPr(e: React.FormEvent) {
     e.preventDefault();
     if (!activeDiscussionClaim || !newPrUrl.trim()) return;
@@ -390,7 +409,7 @@ export function ContributorFastTrack({
           {filteredTasks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {filteredTasks.map((task) => {
-                const claim = claims.find((c) => c.issue_number === task.number);
+                const claim = claims.find((c) => c.issue_number === task.number && c.status !== "rejected");
                 const isClaimedByMe =
                   Boolean(currentUserLogin && claim && claim.user_login.toLowerCase() === currentUserLogin.toLowerCase());
 
@@ -843,13 +862,27 @@ export function ContributorFastTrack({
               <X className="w-4 h-4" />
             </button>
 
-            <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#38bdf8] block">
-                Тред задачи #{activeDiscussionClaim.issue_number}
-              </span>
-              <h3 className="text-base font-bold text-white mt-1">
-                {activeDiscussionClaim.issue_title}
-              </h3>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#38bdf8] block">
+                  Тред задачи #{activeDiscussionClaim.issue_number}
+                </span>
+                <h3 className="text-base font-bold text-white mt-1">
+                  {activeDiscussionClaim.issue_title}
+                </h3>
+              </div>
+              {currentUserLogin?.toLowerCase() === activeDiscussionClaim.user_login.toLowerCase() && (
+                <button
+                  type="button"
+                  disabled={isCancelingClaim}
+                  onClick={handleCancelClaim}
+                  className="px-2.5 py-1 rounded-lg border border-[#e5484d]/30 bg-[#e5484d]/10 hover:bg-[#e5484d]/20 text-[#e5484d] text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                  title="Отказаться от задачи и освободить её для других"
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                  <span>{isCancelingClaim ? "Снятие..." : "Снять заявку"}</span>
+                </button>
+              )}
             </div>
 
             {/* Initial pitch from contributor */}

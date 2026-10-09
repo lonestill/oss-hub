@@ -14,7 +14,9 @@ import {
 } from "@/lib/rateLimit";
 import {
   createTaskClaim,
+  getClaimById,
   updateClaimStatus,
+  cancelTaskClaim,
   addTaskMessage,
   getTaskMessages,
   createTeamApplication,
@@ -362,13 +364,54 @@ export async function updateClaimStatusAction(
   );
   const isSuperAdmin = session.login.toLowerCase() === "lonestill";
 
-  if (!isOwner && !isSuperAdmin && status !== "completed") {
+  // Check if current user is the author of this claim (can withdraw / reject their own claim or submit PR)
+  const currentClaim = await getClaimById(claimId);
+  const isClaimAuthor = Boolean(
+    currentClaim &&
+    currentClaim.user_login.toLowerCase() === session.login.toLowerCase()
+  );
+
+  // Author of the claim is allowed to submit a PR (assigned with prUrl) or cancel/reject their own claim
+  const isSelfCancel = isClaimAuthor && status === "rejected";
+  const isSelfPr = isClaimAuthor && status === "assigned" && Boolean(prUrl);
+
+  if (!isOwner && !isSuperAdmin && status !== "completed" && !isSelfCancel && !isSelfPr) {
     throw new Error("Forbidden");
   }
 
   await updateClaimStatus(claimId, status, prUrl);
   revalidatePath(`/projects/${slug}`);
   revalidatePath(`/users/${session.login}`);
+}
+
+export async function cancelClaimAction(claimId: string, slug: string) {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const claim = await getClaimById(claimId);
+  if (!claim) {
+    throw new Error("Claim not found");
+  }
+
+  const project = await getProjectBySlug(slug);
+  const isOwner = Boolean(
+    project &&
+    project.owner_login &&
+    project.owner_login.toLowerCase() === session.login.toLowerCase()
+  );
+  const isSuperAdmin = session.login.toLowerCase() === "lonestill";
+  const isClaimAuthor = claim.user_login.toLowerCase() === session.login.toLowerCase();
+
+  if (!isOwner && !isSuperAdmin && !isClaimAuthor) {
+    throw new Error("Forbidden");
+  }
+
+  await cancelTaskClaim(claimId);
+  revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/users/${session.login}`);
+  return { success: true };
 }
 
 export async function sendTaskMessageAction(
