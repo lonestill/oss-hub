@@ -1,5 +1,6 @@
 import { client, initDb } from "./db";
 import { TeamApplication } from "./types";
+export type { TeamApplication } from "./types";
 
 export interface TaskClaim {
   id: string;

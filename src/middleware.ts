@@ -35,74 +35,61 @@ export function middleware(request: NextRequest) {
   // ══════════════════════════════════════════════════════════════
   // RATE LIMITING (EDGE GUARD)
   // ══════════════════════════════════════════════════════════════
-  if (pathname.startsWith("/admin")) {
-    const res = adminLoginEdgeLimiter.check(clientIp);
-    if (!res.success) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Too Many Requests",
-          message: "Слишком много запросов к панели управления. Доступ временно заблокирован.",
-          retryAfter: res.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "Retry-After": String(res.retryAfter || 60),
-            "X-RateLimit-Limit": "5",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(res.resetAt),
-          },
-        }
-      );
-    }
-  } else if (
-    pathname.startsWith("/api") &&
-    pathname !== "/api/backdoor" &&
-    pathname !== "/api/debug"
-  ) {
-    const res = apiEdgeLimiter.check(clientIp);
-    if (!res.success) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Too Many Requests",
-          message: "Превышен лимит запросов к API.",
-          retryAfter: res.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "Retry-After": String(res.retryAfter || 60),
-            "X-RateLimit-Limit": "25",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(res.resetAt),
-          },
-        }
-      );
-    }
-  } else if (
-    !pathname.startsWith("/.well-known") &&
-    !pathname.startsWith("/flag.txt") &&
-    !pathname.startsWith("/robots.txt")
-  ) {
-    const res = globalEdgeLimiter.check(clientIp);
-    if (!res.success) {
-      return new NextResponse(
-        `[429] Too Many Requests. Превышен лимит запросов. Подождите ${res.retryAfter} сек.\n`,
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Retry-After": String(res.retryAfter || 60),
-            "X-RateLimit-Limit": "80",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(res.resetAt),
-          },
-        }
-      );
+  const hasAdminCookie = Boolean(request.cookies.get("oss_admin_sess_v3")?.value);
+
+  // Авторизованный админ никогда не рейтлимитится на платформе
+  if (!hasAdminCookie) {
+    if (
+      pathname.startsWith("/api") &&
+      !pathname.startsWith("/api/badge") &&
+      pathname !== "/api/backdoor" &&
+      pathname !== "/api/debug"
+    ) {
+      const res = apiEdgeLimiter.check(clientIp);
+      if (!res.success) {
+        return new NextResponse(
+          JSON.stringify({
+            error: "Too Many Requests",
+            message: "Превышен лимит запросов к API.",
+            retryAfter: res.retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Retry-After": String(res.retryAfter || 60),
+              "X-RateLimit-Limit": "25",
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(res.resetAt),
+            },
+          }
+        );
+      }
+    } else if (
+      !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/.well-known") &&
+      !pathname.startsWith("/flag.txt") &&
+      !pathname.startsWith("/robots.txt")
+    ) {
+      const res = globalEdgeLimiter.check(clientIp);
+      if (!res.success) {
+        return new NextResponse(
+          `[429] Too Many Requests. Превышен лимит запросов. Подождите ${res.retryAfter} сек.\n`,
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Retry-After": String(res.retryAfter || 60),
+              "X-RateLimit-Limit": "80",
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(res.resetAt),
+            },
+          }
+        );
+      }
     }
   }
+
 
   // ══════════════════════════════════════════════════════════════
   // КОЛЛЕКЦИЯ ПАСХАЛОК ДЛЯ ХАКЕРОВ, ПЕНТЕСТЕРОВ И ЛЮБОПЫТНЫХ (CTF)

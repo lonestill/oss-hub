@@ -1,11 +1,15 @@
 import { getSession } from "@/lib/auth";
 import { getProjectsByOwner, getCommentsByAuthor } from "@/lib/projects";
 import { fetchUserRepos } from "@/lib/user-repos";
-import { ProjectCard } from "@/components/ProjectCard";
-import { SubmitForm } from "@/components/SubmitForm";
+import { getClaimsByUser, getTeamApplicationsByUser } from "@/lib/claims";
+import {
+  getUserAvailability,
+  calculateUserBadges,
+  calculateUserStack,
+} from "@/lib/user-profile";
+import { UserProfileTabs } from "@/components/UserProfileTabs";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getClaimsByUser, getTeamApplicationsByUser } from "@/lib/claims";
 import {
   ExternalLink,
   MapPin,
@@ -14,11 +18,7 @@ import {
   Star,
   Users,
   FolderGit2,
-  MessageSquare,
-  Plus,
   Sparkles,
-  CheckCircle2,
-  GitPullRequest,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -66,16 +66,30 @@ export default async function UserProfilePage({ params }: PageProps) {
   const { username } = await params;
   const cleanUsername = decodeURIComponent(username).trim().replace(/^@/, "");
 
-  const [githubUser, session, userProjects, userComments, userClaims, userTeamApps] = await Promise.all([
+  const [
+    githubUser,
+    session,
+    userProjects,
+    userComments,
+    userClaims,
+    userTeamApps,
+    userAvailability,
+  ] = await Promise.all([
     fetchGitHubUserProfile(cleanUsername),
     getSession(),
     getProjectsByOwner(cleanUsername),
     getCommentsByAuthor(cleanUsername),
     getClaimsByUser(cleanUsername),
     getTeamApplicationsByUser(cleanUsername),
+    getUserAvailability(cleanUsername),
   ]);
 
-  if (!githubUser && userProjects.length === 0 && userClaims.length === 0 && userTeamApps.length === 0) {
+  if (
+    !githubUser &&
+    userProjects.length === 0 &&
+    userClaims.length === 0 &&
+    userTeamApps.length === 0
+  ) {
     notFound();
   }
 
@@ -91,7 +105,16 @@ export default async function UserProfilePage({ params }: PageProps) {
   const avatarUrl =
     githubUser?.avatar_url || userProjects[0]?.owner_avatar || "";
   const totalStars = userProjects.reduce((sum, p) => sum + p.stars, 0);
-  const lookingCount = userProjects.filter((p) => p.looking_for_contributors).length;
+
+  const badges = calculateUserBadges({
+    projects: userProjects,
+    claims: userClaims,
+    teamApps: userTeamApps,
+    comments: userComments,
+    totalStars,
+  });
+
+  const stack = calculateUserStack(userProjects, userClaims);
 
   return (
     <div className="space-y-8">
@@ -221,244 +244,20 @@ export default async function UserProfilePage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* If viewing own profile, show Add Project section */}
-      {isOwner && (
-        <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-6 sm:p-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                Опубликовать репозиторий
-              </h2>
-              <p className="text-xs text-[#8a92a3]">
-                Добавьте проект из своего аккаунта GitHub или укажите ссылку на любой публичный репозиторий.
-              </p>
-            </div>
-          </div>
-          <SubmitForm session={session} userRepos={userRepos} />
-        </div>
-      )}
-
-      {/* User's Platform Projects */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
-          <div className="flex items-center gap-2">
-            <FolderGit2 className="w-4 h-4 text-[#8a92a3]" />
-            <h2 className="text-base font-semibold text-white">
-              Опубликованные проекты ({userProjects.length})
-            </h2>
-          </div>
-        </div>
-
-        {userProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {userProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-10 text-center space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-[#8a92a3]">
-              <FolderGit2 className="w-5 h-5" />
-            </div>
-            <div className="text-sm font-semibold text-white">
-              {isOwner
-                ? "У вас пока нет опубликованных проектов"
-                : "У пользователя пока нет опубликованных проектов"}
-            </div>
-            <p className="text-xs text-[#8a92a3] max-w-sm mx-auto">
-              {isOwner
-                ? "Выберите один из ваших репозиториев выше, чтобы добавить его на платформу."
-                : "Автор ещё не добавил свои репозитории в каталог."}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Contributor Activity: Task Claims & Team Applications */}
-      {(userClaims.length > 0 || userTeamApps.length > 0) && (
-        <div className="space-y-6 pt-2">
-          {/* 1. Claims */}
-          {userClaims.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#e5484d]" />
-                  <h2 className="text-base font-semibold text-white">
-                    Задачи в работе ({userClaims.length})
-                  </h2>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {userClaims.map((claim) => (
-                  <div
-                    key={claim.id}
-                    className="p-4 rounded-xl border border-[#1d212b] bg-[#0f1117] space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <Link
-                        href={`/projects/${claim.project_slug}`}
-                        className="text-xs text-[#8a92a3] hover:text-white transition-colors truncate"
-                      >
-                        {claim.project_slug}
-                      </Link>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          claim.status === "assigned"
-                            ? "bg-[#d29922]/20 text-[#d29922]"
-                            : claim.status === "completed"
-                            ? "bg-[#3fb950]/20 text-[#3fb950]"
-                            : claim.status === "rejected"
-                            ? "bg-[#e5484d]/20 text-[#e5484d]"
-                            : "bg-white/10 text-white"
-                        }`}
-                      >
-                        {claim.status === "assigned"
-                          ? "В работе"
-                          : claim.status === "completed"
-                          ? "Выполнено"
-                          : claim.status === "rejected"
-                          ? "Отклонено"
-                          : "На рассмотрении"}
-                      </span>
-                    </div>
-
-                    <Link
-                      href={`/projects/${claim.project_slug}`}
-                      className="font-semibold text-white text-xs block hover:text-[#e5484d] transition-colors leading-snug"
-                    >
-                      #{claim.issue_number} {claim.issue_title}
-                    </Link>
-
-                    <p className="text-[11px] text-[#8a92a3] line-clamp-2">
-                      {claim.pitch}
-                    </p>
-
-                    {claim.pr_url && (
-                      <div className="pt-2 border-t border-[#1d212b] flex items-center gap-1.5 text-[11px]">
-                        <GitPullRequest className="w-3.5 h-3.5 text-[#38bdf8]" />
-                        <a
-                          href={claim.pr_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#38bdf8] hover:underline font-mono truncate"
-                        >
-                          {claim.pr_url}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2. Team Applications */}
-          {userTeamApps.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#38bdf8]" />
-                  <h2 className="text-base font-semibold text-white">
-                    Заявки в команды ({userTeamApps.length})
-                  </h2>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {userTeamApps.map((app) => (
-                  <div
-                    key={app.id}
-                    className="p-4 rounded-xl border border-[#1d212b] bg-[#0f1117] space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <Link
-                        href={`/projects/${app.project_slug}`}
-                        className="text-xs text-[#8a92a3] hover:text-white transition-colors truncate"
-                      >
-                        {app.project_slug}
-                      </Link>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          app.status === "accepted"
-                            ? "bg-[#3fb950]/20 text-[#3fb950]"
-                            : app.status === "rejected"
-                            ? "bg-[#e5484d]/20 text-[#e5484d]"
-                            : "bg-white/10 text-white"
-                        }`}
-                      >
-                        {app.status === "accepted"
-                          ? "Принят в команду"
-                          : app.status === "rejected"
-                          ? "Отклонено"
-                          : "Ожидает ответа"}
-                      </span>
-                    </div>
-
-                    <div className="text-xs font-semibold text-white">
-                      Роль: <span className="text-[#38bdf8]">{app.role}</span>
-                    </div>
-
-                    <p className="text-[11px] text-[#8a92a3] line-clamp-2">
-                      {app.experience}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Recent Comments / Activity */}
-      {userComments.length > 0 && (
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#8a92a3]" />
-              <h2 className="text-base font-semibold text-white">
-                Активность в обсуждениях ({userComments.length})
-              </h2>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {userComments.map((comment) => (
-              <div
-                key={comment.id}
-                className="rounded-xl border border-[#1d212b] bg-[#0f1117] p-4 space-y-2 text-xs"
-              >
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="text-[#8a92a3]">В проекте:</span>
-                    {comment.project_slug ? (
-                      <Link
-                        href={`/projects/${comment.project_slug}`}
-                        className="font-semibold text-white hover:underline truncate"
-                      >
-                        {comment.project_name || comment.project_slug}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-white">
-                        {comment.project_name || "Проект"}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[#8a92a3] text-[11px] shrink-0">
-                    {new Date(comment.created_at).toLocaleDateString("ru-RU", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </div>
-                <p className="text-xs text-[#d1d5db] whitespace-pre-wrap leading-relaxed">
-                  {comment.content}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Interactive Tabs: Projects, Tasks, Teams, Badges, Activity, README Badge */}
+      <UserProfileTabs
+        cleanUsername={cleanUsername}
+        isOwner={isOwner}
+        projects={userProjects}
+        claims={userClaims}
+        teamApps={userTeamApps}
+        comments={userComments}
+        availability={userAvailability}
+        badges={badges}
+        stack={stack}
+        userRepos={userRepos}
+        session={session}
+      />
     </div>
   );
 }

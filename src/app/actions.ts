@@ -22,6 +22,7 @@ import {
   createTeamApplication,
   updateTeamApplicationStatus,
 } from "@/lib/claims";
+import { upsertUserAvailability } from "@/lib/user-profile";
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
@@ -522,6 +523,31 @@ export async function updateTeamApplicationStatusAction(
 
 export async function getTaskMessagesAction(claimId: string) {
   return await getTaskMessages(claimId);
+}
+
+export async function updateUserAvailabilityAction(formData: FormData) {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const status = (formData.get("status") as any) || "open";
+  const status_text = formData.get("status_text") as string;
+  const preferred_stack = formData.get("preferred_stack") as string;
+  const hours_per_week = formData.get("hours_per_week") as string;
+  const telegram = formData.get("telegram") as string;
+
+  await upsertUserAvailability({
+    login: session.login,
+    status,
+    status_text,
+    preferred_stack,
+    hours_per_week,
+    telegram,
+  });
+
+  revalidatePath(`/users/${session.login}`);
+  return { success: true };
 }
 
 

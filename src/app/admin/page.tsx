@@ -1,4 +1,4 @@
-import { getSession, isAdminAuthenticated } from "@/lib/auth";
+import { getSession, isAdminAuthenticated, isUserAdmin } from "@/lib/auth";
 import { getProjects } from "@/lib/projects";
 import { AdminProjectRow } from "@/components/AdminProjectRow";
 import { redirect } from "next/navigation";
@@ -21,7 +21,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     redirect("/login");
   }
 
-  if (session.login.toLowerCase() !== "lonestill") {
+  const isDbAdmin = await isUserAdmin(session.login);
+  if (!isDbAdmin) {
     redirect("/admin/login");
   }
 

@@ -160,5 +160,18 @@ export async function initDb() {
     );
   `);
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      login TEXT PRIMARY KEY,
+      status TEXT DEFAULT 'open',
+      status_text TEXT,
+      preferred_stack TEXT,
+      hours_per_week TEXT,
+      telegram TEXT,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
   isInitialized = true;
 }
+
