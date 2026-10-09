@@ -82,8 +82,8 @@ export class InMemoryRateLimiter {
 // 1. Глобальный лимит на обычный браузинг: 80 запросов в 60 сек на IP
 export const globalEdgeLimiter = new InMemoryRateLimiter(60 * 1000, 80, 60 * 1000);
 
-// 2. Лимит на логин в админку: 5 попыток в минуту. Превысил — бан на 5 минут (300 сек)
-export const adminLoginEdgeLimiter = new InMemoryRateLimiter(60 * 1000, 5, 300 * 1000);
+// 2. Лимит на логин в админку: 20 попыток в минуту. Превысил — бан на 60 сек
+export const adminLoginEdgeLimiter = new InMemoryRateLimiter(60 * 1000, 20, 60 * 1000);
 
 // 3. Лимит на API эндпоинты: 25 запросов в минуту
 export const apiEdgeLimiter = new InMemoryRateLimiter(60 * 1000, 25, 60 * 1000);

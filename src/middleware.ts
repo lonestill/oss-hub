@@ -15,6 +15,40 @@ function getClientIp(req: NextRequest): string {
   return req.headers.get("x-real-ip") || "unknown";
 }
 
+async function isValidAdminCookie(cookieValue?: string): Promise<boolean> {
+  if (!cookieValue) return false;
+  const parts = cookieValue.split(".");
+  if (parts.length !== 2) return false;
+  const [payload, signatureHex] = parts;
+  const secret =
+    process.env.SESSION_SECRET ||
+    process.env.ADMIN_PASSWORD ||
+    process.env.TURSO_AUTH_TOKEN ||
+    "oss-hub-dev-insecure-secret-key-change-me";
+
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const expHex = Array.from(new Uint8Array(sigBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    if (expHex !== signatureHex) {
+      return false;
+    }
+    const decoded = JSON.parse(atob(payload));
+    return Boolean(decoded && decoded.admin && typeof decoded.ts === "number");
+  } catch {
+    return false;
+  }
+}
+
 // Список User-Agent популярных сканеров и фаззеров
 const SCANNER_UA_REGEX =
   /(sqlmap|nikto|dirbuster|dirsearch|gobuster|ffuf|wfuzz|wpscan|nuclei|acunetix|nessus|nmap|masscan|zgrab|openvas|arachni|netsparker|burpcollaborator|hydra|medusa|havij)/i;
@@ -26,7 +60,7 @@ const SUSPICIOUS_PATHS_REGEX =
 // Паттерны LFI / Path Traversal
 const TRAVERSAL_REGEX = /(\.\.\/|\.\.\\|%2e%2e|\/etc\/passwd|\/win\.ini|\/boot\.ini)/i;
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userAgent = request.headers.get("user-agent") || "";
   const acceptEncoding = request.headers.get("accept-encoding") || "";
@@ -35,11 +69,32 @@ export function middleware(request: NextRequest) {
   // ══════════════════════════════════════════════════════════════
   // RATE LIMITING (EDGE GUARD)
   // ══════════════════════════════════════════════════════════════
-  const hasAdminCookie = Boolean(request.cookies.get("oss_admin_sess_v3")?.value);
+  const hasValidAdmin = await isValidAdminCookie(request.cookies.get("oss_admin_sess_v3")?.value);
 
-  // Авторизованный админ никогда не рейтлимитится на платформе
-  if (!hasAdminCookie) {
-    if (
+  // Авторизованный админ с проверенной HMAC-подписью никогда не рейтлимитится
+  if (!hasValidAdmin) {
+    if (pathname === "/admin/login") {
+      const res = adminLoginEdgeLimiter.check(clientIp);
+      if (!res.success) {
+        return new NextResponse(
+          JSON.stringify({
+            error: "Too Many Requests",
+            message: "Слишком много запросов к панели входа. Доступ временно заблокирован.",
+            retryAfter: res.retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Retry-After": String(res.retryAfter || 60),
+              "X-RateLimit-Limit": "20",
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(res.resetAt),
+            },
+          }
+        );
+      }
+    } else if (
       pathname.startsWith("/api") &&
       !pathname.startsWith("/api/badge") &&
       pathname !== "/api/backdoor" &&
