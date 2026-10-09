@@ -8,8 +8,25 @@ export interface UserSession {
   token?: string;
 }
 
+import { client, initDb } from "./db";
+
 const COOKIE_NAME = "oss_hub_sess_v3";
 const ADMIN_COOKIE_NAME = "oss_admin_sess_v3";
+
+export async function isUserAdmin(login?: string | null): Promise<boolean> {
+  if (!login) return false;
+  try {
+    await initDb();
+    const result = await client.execute({
+      sql: `SELECT login FROM admins WHERE LOWER(login) = LOWER(?) LIMIT 1`,
+      args: [login.trim()],
+    });
+    return result.rows.length > 0;
+  } catch (err) {
+    console.error("Failed to check admin status in DB:", err);
+    return false;
+  }
+}
 
 function getSecretKey(): string {
   return (
@@ -86,7 +103,7 @@ export async function clearSession() {
 
 export async function isAdminAuthenticated(): Promise<boolean> {
   const session = await getSession();
-  if (!session || session.login.toLowerCase() !== "lonestill") {
+  if (!session || !(await isUserAdmin(session.login))) {
     return false;
   }
   const cookieStore = await cookies();
@@ -98,7 +115,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64").toString("utf-8"));
-    if (parsed && parsed.admin === "lonestill" && typeof parsed.ts === "number") {
+    if (parsed && parsed.admin === session.login.toLowerCase() && typeof parsed.ts === "number") {
       return true;
     }
   } catch {
@@ -110,7 +127,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
 export async function setAdminSession(password: string): Promise<boolean> {
   const session = await getSession();
-  if (!session || session.login.toLowerCase() !== "lonestill") {
+  if (!session || !(await isUserAdmin(session.login))) {
     return false;
   }
 
@@ -120,7 +137,7 @@ export async function setAdminSession(password: string): Promise<boolean> {
   }
 
   const adminPayload = Buffer.from(
-    JSON.stringify({ admin: "lonestill", ts: Date.now() })
+    JSON.stringify({ admin: session.login.toLowerCase(), ts: Date.now() })
   ).toString("base64");
   const signedAdmin = signPayload(adminPayload);
 

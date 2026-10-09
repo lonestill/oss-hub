@@ -1,5 +1,5 @@
 import { getProjectBySlug, getComments } from "@/lib/projects";
-import { getSession } from "@/lib/auth";
+import { getSession, isUserAdmin } from "@/lib/auth";
 import { fetchGitHubIssues, fetchGitHubReleases } from "@/lib/github";
 import { notFound } from "next/navigation";
 import { Star, GitFork, AlertCircle, ExternalLink, Globe, LayoutDashboard } from "lucide-react";
@@ -29,7 +29,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
 
   const session = await getSession();
-  const isAdmin = Boolean(session && session.login.toLowerCase() === "lonestill");
+  const isAdmin = session ? await isUserAdmin(session.login) : false;
   const isOwner = Boolean(
     session &&
       project.owner_login &&
@@ -133,7 +133,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 
           {/* External Links & CRM Shortcut */}
           <div className="flex items-center gap-2 text-xs flex-wrap">
-            {(isOwner || isAdmin) && (
+            {isOwner && (
               <Link
                 href={`/projects/${project.slug}/crm`}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#e5484d]/15 hover:bg-[#e5484d]/25 text-[#e5484d] hover:text-white border border-[#e5484d]/30 font-semibold transition-colors shadow-sm"
@@ -269,6 +269,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                 comments={comments}
                 session={session}
                 ownerLogin={project.owner_login}
+                isAdmin={isAdmin}
               />
             </div>
           </div>

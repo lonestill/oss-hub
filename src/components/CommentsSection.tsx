@@ -13,6 +13,7 @@ interface CommentsSectionProps {
   comments: Comment[];
   session?: UserSession | null;
   ownerLogin?: string | null;
+  isAdmin?: boolean;
 }
 
 export function CommentsSection({
@@ -21,6 +22,7 @@ export function CommentsSection({
   comments,
   session,
   ownerLogin,
+  isAdmin = false,
 }: CommentsSectionProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
@@ -35,10 +37,7 @@ export function CommentsSection({
   const isCurrentSessionOwner = Boolean(
     session && ownerLogin && session.login.toLowerCase() === ownerLogin.toLowerCase()
   );
-  const isSuperAdmin = Boolean(
-    session && session.login.toLowerCase() === "lonestill"
-  );
-  const canModerate = isCurrentSessionOwner || isSuperAdmin;
+  const canModerate = isCurrentSessionOwner || isAdmin;
 
   const handleDelete = (commentId: string) => {
     if (!window.confirm("Удалить этот комментарий?")) return;

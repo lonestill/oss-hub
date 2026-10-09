@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { addOrUpdateProject, addComment, getProjectBySlug, updateProjectModerationStatus, deleteProject } from "@/lib/projects";
-import { getSession, setSession, clearSession, isAdminAuthenticated, setAdminSession } from "@/lib/auth";
+import { getSession, setSession, clearSession, isAdminAuthenticated, setAdminSession, isUserAdmin } from "@/lib/auth";
 import { client, initDb } from "@/lib/db";
 import { analyzeRepository } from "@/lib/moderation";
 import { redirect } from "next/navigation";
@@ -278,7 +278,7 @@ export async function deleteCommentAction(commentId: string, slug: string) {
   }
 
   await initDb();
-  const isSuperAdmin = session.login.toLowerCase() === "lonestill";
+  const isSuperAdmin = await isUserAdmin(session.login);
   const isAuth = await isAdminAuthenticated();
 
   const project = await getProjectBySlug(slug);
@@ -362,7 +362,7 @@ export async function updateClaimStatusAction(
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
-  const isSuperAdmin = session.login.toLowerCase() === "lonestill";
+  const isSuperAdmin = await isUserAdmin(session.login);
 
   // Check if current user is the author of this claim (can withdraw / reject their own claim or submit PR)
   const currentClaim = await getClaimById(claimId);
@@ -401,7 +401,7 @@ export async function cancelClaimAction(claimId: string, slug: string) {
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
-  const isSuperAdmin = session.login.toLowerCase() === "lonestill";
+  const isSuperAdmin = await isUserAdmin(session.login);
   const isClaimAuthor = claim.user_login.toLowerCase() === session.login.toLowerCase();
 
   if (!isOwner && !isSuperAdmin && !isClaimAuthor) {
@@ -509,7 +509,7 @@ export async function updateTeamApplicationStatusAction(
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
-  const isSuperAdmin = session.login.toLowerCase() === "lonestill";
+  const isSuperAdmin = await isUserAdmin(session.login);
 
   if (!isOwner && !isSuperAdmin) {
     throw new Error("Forbidden");

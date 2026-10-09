@@ -153,5 +153,12 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_team_apps_user ON team_applications(user_login);
   `);
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS admins (
+      login TEXT PRIMARY KEY,
+      created_at INTEGER NOT NULL
+    );
+  `);
+
   isInitialized = true;
 }

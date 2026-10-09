@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { FolderGit2, Shield } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { getSession, isUserAdmin } from "@/lib/auth";
 
 export async function Navbar() {
   const session = await getSession();
+  const isAdmin = session ? await isUserAdmin(session.login) : false;
 
   return (
     <header className="sticky top-0 z-50 bg-[#090a0f]/85 backdrop-blur-md border-b border-[#1d212b]">
@@ -84,7 +85,7 @@ export async function Navbar() {
                   @{session.login}
                 </span>
               </Link>
-              {session.login.toLowerCase() === "lonestill" && (
+              {isAdmin && (
                 <Link
                   href="/admin"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#e5484d]/10 border border-[#e5484d]/30 text-[#e5484d] text-xs font-semibold hover:bg-[#e5484d]/20 transition-colors"

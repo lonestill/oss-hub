@@ -40,14 +40,13 @@ export default async function ProjectCrmPage({ params }: PageProps) {
     redirect(`/login?returnUrl=/projects/${slug}/crm`);
   }
 
-  const isAdmin = Boolean(session.login.toLowerCase() === "lonestill");
   const isOwner = Boolean(
     project.owner_login &&
       session.login.toLowerCase() === project.owner_login.toLowerCase()
   );
 
-  // Access check: only repository maintainer or platform admin
-  if (!isAdmin && !isOwner) {
+  // Access check: only repository maintainer (strict isolation)
+  if (!isOwner) {
     return (
       <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-[#30363d] bg-[#0d1117] text-center space-y-6 shadow-2xl">
         <div className="w-14 h-14 rounded-2xl bg-[#e5484d]/10 border border-[#e5484d]/20 text-[#e5484d] flex items-center justify-center mx-auto">

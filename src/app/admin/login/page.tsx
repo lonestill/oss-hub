@@ -1,4 +1,4 @@
-import { getSession, isAdminAuthenticated } from "@/lib/auth";
+import { getSession, isAdminAuthenticated, isUserAdmin } from "@/lib/auth";
 import { adminLoginAction } from "@/app/actions";
 import { ShieldAlert, ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +16,8 @@ export default async function AdminLoginPage({
     redirect("/login");
   }
 
-  if (session.login.toLowerCase() !== "lonestill") {
+  const isAdmin = await isUserAdmin(session.login);
+  if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto py-16 text-center space-y-4">
         <div className="w-12 h-12 rounded-2xl bg-[#e5484d]/10 border border-[#e5484d]/20 flex items-center justify-center text-[#e5484d] mx-auto">
@@ -24,7 +25,7 @@ export default async function AdminLoginPage({
         </div>
         <h1 className="text-xl font-bold text-white">403 — Доступ запрещён</h1>
         <p className="text-xs text-[#8a92a3]">
-          Панель управления доступна исключительно супер-администратору @lonestill.
+          Панель управления доступна исключительно администраторам платформы.
         </p>
         <Link
           href="/"
