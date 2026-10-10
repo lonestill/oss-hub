@@ -28,18 +28,6 @@ export async function Navbar() {
           {/* Navigation Links */}
           <nav className="hidden sm:flex items-center gap-1 text-sm">
             <Link
-              href="/"
-              className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
-            >
-              Проекты
-            </Link>
-            <Link
-              href="/contributors"
-              className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
-            >
-              Ищут разработчиков
-            </Link>
-            <Link
               href="/guide"
               className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
             >

@@ -29,7 +29,7 @@ export default function NotFound() {
           <span>На главную</span>
         </Link>
         <Link
-          href="/contributors"
+          href="/?tab=looking"
           className="px-4 py-2 rounded-lg border border-[#1d212b] bg-[#0f1117] hover:border-[#2e3444] text-xs font-medium text-white transition-colors"
         >
           Ищут разработчиков
