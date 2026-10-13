@@ -31,6 +31,7 @@ import {
 import { ProjectCard } from "@/components/ProjectCard";
 import { SubmitForm } from "@/components/SubmitForm";
 import { updateUserAvailabilityAction } from "@/app/actions";
+import { useLanguage } from "@/lib/i18n";
 
 export type UserProfileComment = Comment & {
   project_name?: string;
@@ -65,6 +66,7 @@ export function UserProfileTabs({
   userRepos,
   session,
 }: UserProfileTabsProps) {
+  const { t, locale } = useLanguage();
   const [activeTab, setActiveTab] = useState<
     "projects" | "tasks" | "teams" | "badges" | "activity" | "badge"
   >("projects");
@@ -89,10 +91,10 @@ export function UserProfileTabs({
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-white flex items-center gap-1.5">
               <Code2 className="w-3.5 h-3.5 text-[#e5484d]" />
-              <span>Технологический стек</span>
+              <span>{t.profile.techStackTitle}</span>
             </span>
             <span className="text-[11px] text-[#8a92a3] font-mono">
-              {stack.length > 0 ? `${stack.length} технологии` : "Нет данных"}
+              {stack.length > 0 ? `${stack.length} ${t.profile.techCount}` : t.profile.noData}
             </span>
           </div>
 
@@ -126,7 +128,7 @@ export function UserProfileTabs({
             </div>
           ) : (
             <p className="text-xs text-[#8a92a3]">
-              Стек сформируется автоматически после добавления проектов или взятия задач.
+              {t.profile.stackAutoNotice}
             </p>
           )}
         </div>
@@ -137,7 +139,7 @@ export function UserProfileTabs({
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-white flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5 text-[#38bdf8]" />
-                <span>Статус доступности</span>
+                <span>{t.profile.availabilityTitle}</span>
               </span>
 
               {isOwner && (
@@ -146,7 +148,7 @@ export function UserProfileTabs({
                   onClick={() => setIsEditingAvailability(!isEditingAvailability)}
                   className="text-[11px] text-[#38bdf8] hover:underline"
                 >
-                  {isEditingAvailability ? "Отмена" : "Изменить"}
+                  {isEditingAvailability ? t.profile.cancel : t.profile.edit}
                 </button>
               )}
             </div>
@@ -163,10 +165,10 @@ export function UserProfileTabs({
               />
               <span className="text-xs font-semibold text-white">
                 {availability?.status === "busy"
-                  ? "Занят проектами"
+                  ? t.profile.statusBusyDesc
                   : availability?.status === "mentor"
-                  ? "Помогаю новичкам"
-                  : "Открыт к контрибьюциям"}
+                  ? t.profile.statusMentorDesc
+                  : t.profile.statusOpenDesc}
               </span>
             </div>
 
@@ -180,13 +182,13 @@ export function UserProfileTabs({
               {availability?.hours_per_week && (
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-[#586071]" />
-                  <span>Готовность: {availability.hours_per_week}</span>
+                  <span>{t.profile.readiness}: {availability.hours_per_week}</span>
                 </div>
               )}
               {availability?.preferred_stack && (
                 <div className="flex items-center gap-1.5">
                   <Wrench className="w-3 h-3 text-[#586071]" />
-                  <span className="truncate">Интересно: {availability.preferred_stack}</span>
+                  <span className="truncate">{t.profile.interested}: {availability.preferred_stack}</span>
                 </div>
               )}
             </div>
@@ -206,7 +208,7 @@ export function UserProfileTabs({
                 className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-white border border-[#2e3444] text-xs font-semibold transition-colors"
               >
                 <Send className="w-3 h-3 text-[#38bdf8]" />
-                <span>Написать в Telegram</span>
+                <span>{t.profile.writeTelegram}</span>
               </a>
             ) : isOwner ? (
               <button
@@ -214,7 +216,7 @@ export function UserProfileTabs({
                 onClick={() => setIsEditingAvailability(true)}
                 className="w-full text-center px-3 py-1.5 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-[#8a92a3] hover:text-white border border-[#1d212b] text-xs transition-colors"
               >
-                Указать контакты и стек
+                {t.profile.specifyContacts}
               </button>
             ) : null}
           </div>
@@ -232,69 +234,69 @@ export function UserProfileTabs({
         >
           <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
             <h3 className="text-sm font-bold text-white">
-              Настройка статуса и контактов
+              {t.profile.availabilityEditTitle}
             </h3>
             <span className="text-xs text-[#8a92a3]">
-              Отображается мейнтейнерам проектов
+              {t.profile.availabilityVisibleTo}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="space-y-1">
-              <label className="text-[#8a92a3] font-medium">Статус</label>
+              <label className="text-[#8a92a3] font-medium">{t.profile.statusLabel}</label>
               <select
                 name="status"
                 defaultValue={availability?.status || "open"}
                 className="w-full rounded-lg border border-[#1d212b] bg-[#0f1117] px-3 py-2 text-white focus:outline-none focus:border-[#2e3444]"
               >
-                <option value="open">Открыт к контрибьюциям</option>
-                <option value="busy">Занят проектами</option>
-                <option value="mentor">Помогаю новичкам</option>
-                <option value="maintainer">Ищу мейнтейнеров в команду</option>
+                <option value="open">{t.profile.statusOpen}</option>
+                <option value="busy">{t.profile.statusBusy}</option>
+                <option value="mentor">{t.profile.statusMentor}</option>
+                <option value="maintainer">{t.profile.statusMaintainer}</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[#8a92a3] font-medium">Готовность по времени</label>
+              <label className="text-[#8a92a3] font-medium">{t.profile.readiness}</label>
               <input
                 type="text"
                 name="hours_per_week"
                 defaultValue={availability?.hours_per_week || "5-10 ч/нед"}
-                placeholder="Например: 5-10 ч/нед или выходные"
+                placeholder={t.profile.hoursPlaceholder}
                 className="w-full rounded-lg border border-[#1d212b] bg-[#0f1117] px-3 py-2 text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[#8a92a3] font-medium">Предпочитаемый стек</label>
+              <label className="text-[#8a92a3] font-medium">{t.profile.stackLabel}</label>
               <input
                 type="text"
                 name="preferred_stack"
                 defaultValue={availability?.preferred_stack || ""}
-                placeholder="Rust, TypeScript, C++, DevOps"
+                placeholder={t.profile.stackPlaceholder}
                 className="w-full rounded-lg border border-[#1d212b] bg-[#0f1117] px-3 py-2 text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[#8a92a3] font-medium">Telegram для связи</label>
+              <label className="text-[#8a92a3] font-medium">{t.profile.telegramLabel}</label>
               <input
                 type="text"
                 name="telegram"
                 defaultValue={availability?.telegram || ""}
-                placeholder="@username или ссылка"
+                placeholder="@username"
                 className="w-full rounded-lg border border-[#1d212b] bg-[#0f1117] px-3 py-2 text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
               />
             </div>
           </div>
 
           <div className="space-y-1 text-xs">
-            <label className="text-[#8a92a3] font-medium">Краткий комментарий</label>
+            <label className="text-[#8a92a3] font-medium">{t.profile.commentLabel}</label>
             <textarea
               name="status_text"
               rows={2}
               defaultValue={availability?.status_text || ""}
-              placeholder="Какие задачи интересны, в чём сильны, над чем работаете..."
+              placeholder={t.profile.commentPlaceholder}
               className="w-full rounded-lg border border-[#1d212b] bg-[#0f1117] px-3 py-2 text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444] resize-none"
             />
           </div>
@@ -305,13 +307,13 @@ export function UserProfileTabs({
               onClick={() => setIsEditingAvailability(false)}
               className="px-3 py-1.5 rounded-lg border border-[#1d212b] bg-[#161a23] text-xs text-[#8a92a3] hover:text-white"
             >
-              Отмена
+              {t.profile.cancel}
             </button>
             <button
               type="submit"
               className="px-4 py-1.5 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] text-xs font-bold text-white transition-colors"
             >
-              Сохранить статус
+              {t.profile.saveStatusBtn}
             </button>
           </div>
         </form>
@@ -329,7 +331,7 @@ export function UserProfileTabs({
           }`}
         >
           <FolderGit2 className="w-3.5 h-3.5" />
-          <span>Проекты ({projects.length})</span>
+          <span>{t.profile.projectsTab} ({projects.length})</span>
         </button>
 
         <button
@@ -342,7 +344,7 @@ export function UserProfileTabs({
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-[#e5484d]" />
-          <span>Задачи и PR ({claims.length})</span>
+          <span>{t.profile.tasksAndPrsTab} ({claims.length})</span>
         </button>
 
         <button
@@ -355,7 +357,7 @@ export function UserProfileTabs({
           }`}
         >
           <Users className="w-3.5 h-3.5 text-[#38bdf8]" />
-          <span>Команды ({teamApps.length})</span>
+          <span>{t.profile.teamsTab} ({teamApps.length})</span>
         </button>
 
         <button
@@ -368,7 +370,7 @@ export function UserProfileTabs({
           }`}
         >
           <Award className="w-3.5 h-3.5 text-[#d29922]" />
-          <span>Достижения ({unlockedCount}/{badges.length})</span>
+          <span>{t.profile.badgesTabTitle} ({unlockedCount}/{badges.length})</span>
         </button>
 
         <button
@@ -381,7 +383,7 @@ export function UserProfileTabs({
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>Обсуждения ({comments.length})</span>
+          <span>{t.profile.activityTab} ({comments.length})</span>
         </button>
 
         <button
@@ -394,7 +396,7 @@ export function UserProfileTabs({
           }`}
         >
           <Share2 className="w-3.5 h-3.5 text-[#3fb950]" />
-          <span>README Бейдж</span>
+          <span>{t.profile.badgeTab}</span>
         </button>
       </div>
 
@@ -408,10 +410,10 @@ export function UserProfileTabs({
             <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-6 space-y-3">
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-white tracking-tight">
-                  Опубликовать репозиторий
+                  {t.profile.publishRepoTitle}
                 </h3>
                 <p className="text-xs text-[#8a92a3]">
-                  Выберите проект из аккаунта GitHub или укажите публичную ссылку.
+                  {t.profile.publishRepoDesc}
                 </p>
               </div>
               <SubmitForm session={session} userRepos={userRepos} />
@@ -431,13 +433,13 @@ export function UserProfileTabs({
               </div>
               <div className="text-sm font-semibold text-white">
                 {isOwner
-                  ? "У вас пока нет опубликованных проектов"
-                  : "У пользователя пока нет опубликованных проектов"}
+                  ? t.profile.noProjectsOwner
+                  : t.profile.noProjectsUser}
               </div>
               <p className="text-xs text-[#8a92a3] max-w-sm mx-auto">
                 {isOwner
-                  ? "Опубликуйте первый проект через форму выше, чтобы найти контрибьюторов."
-                  : "Автор ещё не добавил свои проекты в открытый каталог."}
+                  ? t.profile.noProjectsOwnerDesc
+                  : t.profile.noProjectsUserDesc}
               </p>
             </div>
           )}
@@ -473,12 +475,12 @@ export function UserProfileTabs({
                       }`}
                     >
                       {claim.status === "assigned"
-                        ? "В разработке"
+                        ? t.profile.statusInDev
                         : claim.status === "completed"
-                        ? "Выполнено"
+                        ? t.profile.statusCompleted
                         : claim.status === "rejected"
-                        ? "Отклонено"
-                        : "На рассмотрении"}
+                        ? t.profile.statusRejected
+                        : t.profile.statusUnderReview}
                     </span>
                   </div>
 
@@ -512,12 +514,12 @@ export function UserProfileTabs({
           ) : (
             <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-10 text-center space-y-2">
               <div className="text-sm font-semibold text-white">
-                Нет взятых задач
+                {t.profile.noTasksTitle}
               </div>
               <p className="text-xs text-[#8a92a3]">
                 {isOwner
-                  ? "Перейдите в каталог репозиториев и выберите открытую задачу в команду."
-                  : "Пользователь пока не брал открытые задачи."}
+                  ? t.profile.noTasksOwnerDesc
+                  : t.profile.noTasksUserDesc}
               </p>
             </div>
           )}
@@ -551,15 +553,15 @@ export function UserProfileTabs({
                       }`}
                     >
                       {app.status === "accepted"
-                        ? "Принят в команду"
+                        ? t.profile.teamAccepted
                         : app.status === "rejected"
-                        ? "Отклонено"
-                        : "Ожидает ответа"}
+                        ? t.profile.statusRejected
+                        : t.profile.teamWaiting}
                     </span>
                   </div>
 
                   <div className="text-xs font-semibold text-white">
-                    Роль: <span className="text-[#38bdf8]">{app.role}</span>
+                    {t.profile.teamRoleLabel} <span className="text-[#38bdf8]">{app.role}</span>
                   </div>
 
                   <p className="text-[11px] text-[#8a92a3] line-clamp-2">
@@ -571,12 +573,12 @@ export function UserProfileTabs({
           ) : (
             <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-10 text-center space-y-2">
               <div className="text-sm font-semibold text-white">
-                Нет заявок в команды
+                {t.profile.noTeamsTitle}
               </div>
               <p className="text-xs text-[#8a92a3]">
                 {isOwner
-                  ? "Находите проекты с пометкой «Ищут команду» и откликайтесь на вакансии."
-                  : "Пользователь пока не подавал заявок в команды проектов."}
+                  ? t.profile.noTeamsOwnerDesc
+                  : t.profile.noTeamsUserDesc}
               </p>
             </div>
           )}
@@ -588,10 +590,10 @@ export function UserProfileTabs({
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-[#1d212b] pb-3 text-xs">
             <span className="text-[#8a92a3]">
-              Разблокировано: <span className="text-white font-bold">{unlockedCount}</span> из {badges.length}
+              {t.profile.achievementsUnlocked} <span className="text-white font-bold">{unlockedCount}</span> {t.profile.of} {badges.length}
             </span>
             <span className="text-[#586071] font-mono">
-              Рассчитывается автоматически
+              {t.profile.calculatedAuto}
             </span>
           </div>
 
@@ -622,7 +624,7 @@ export function UserProfileTabs({
                         : "bg-white/5 text-[#586071]"
                     }`}
                   >
-                    {badge.unlocked ? "Получено" : "В процессе"}
+                    {badge.unlocked ? t.profile.badgeEarned : t.profile.badgeInProgress}
                   </span>
                 </div>
 
@@ -632,7 +634,7 @@ export function UserProfileTabs({
 
                 {badge.progressText && (
                   <div className="pt-1 text-[10px] font-mono text-[#586071] border-t border-[#1d212b]">
-                    Прогресс: {badge.progressText}
+                    {t.profile.badgeProgress} {badge.progressText}
                   </div>
                 )}
               </div>
@@ -652,7 +654,7 @@ export function UserProfileTabs({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 truncate">
-                    <span className="text-[#8a92a3]">В репозитории:</span>
+                    <span className="text-[#8a92a3]">{t.profile.inRepo}</span>
                     {comment.project_slug ? (
                       <Link
                         href={`/projects/${comment.project_slug}`}
@@ -667,7 +669,7 @@ export function UserProfileTabs({
                     )}
                   </div>
                   <span className="text-[#8a92a3] text-[11px] shrink-0 font-mono">
-                    {new Date(comment.created_at).toLocaleDateString("ru-RU", {
+                    {new Date(comment.created_at).toLocaleDateString(locale === "en" ? "en-US" : "ru-RU", {
                       day: "numeric",
                       month: "short",
                     })}
@@ -681,10 +683,10 @@ export function UserProfileTabs({
           ) : (
             <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-10 text-center space-y-2">
               <div className="text-sm font-semibold text-white">
-                Нет активности в обсуждениях
+                {t.profile.noActivityTitle}
               </div>
               <p className="text-xs text-[#8a92a3]">
-                Комментарии к проектам появятся здесь.
+                {t.profile.noActivityDesc}
               </p>
             </div>
           )}
@@ -696,17 +698,17 @@ export function UserProfileTabs({
         <div className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-6 sm:p-8 space-y-6">
           <div className="space-y-1">
             <h3 className="text-base font-bold text-white tracking-tight">
-              Динамический бейдж для профиля GitHub
+              {t.profile.readmeBadgeTitle}
             </h3>
             <p className="text-xs text-[#8a92a3]">
-              Вставьте этот код в файл <code className="text-white font-mono">README.md</code> вашего профиля GitHub или репозитория. Бейдж генерируется на лету и автоматически обновляет статистику ваших проектов и решённых задач.
+              {t.profile.readmeBadgeDesc}
             </p>
           </div>
 
           {/* Live Preview */}
           <div className="space-y-2">
             <span className="text-[11px] font-mono text-[#8a92a3] uppercase tracking-wider block">
-              Превью бейджа:
+              {t.profile.badgePreview}
             </span>
             <div className="p-4 rounded-xl border border-[#1d212b] bg-[#090a0f] flex items-center justify-center overflow-x-auto">
               <img
@@ -720,7 +722,7 @@ export function UserProfileTabs({
           {/* Markdown Code & Copy Button */}
           <div className="space-y-2">
             <span className="text-[11px] font-mono text-[#8a92a3] uppercase tracking-wider block">
-              Код для вставки в Markdown:
+              {t.profile.badgeMarkdownCode}
             </span>
             <div className="relative rounded-xl border border-[#1d212b] bg-[#12151d] p-3.5 font-mono text-xs text-[#c9d1d9] overflow-x-auto">
               <code>{badgeMarkdown}</code>
@@ -732,12 +734,12 @@ export function UserProfileTabs({
                 {copiedBadge ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-[#3fb950]" />
-                    <span className="text-[#3fb950]">Скопировано</span>
+                    <span className="text-[#3fb950]">{t.profile.badgeCopied}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Скопировать</span>
+                    <span>{t.profile.badgeCopy}</span>
                   </>
                 )}
               </button>

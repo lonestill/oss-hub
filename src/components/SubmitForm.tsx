@@ -7,6 +7,7 @@ import { GitHubUserRepo } from "@/lib/user-repos";
 import { UserSession } from "@/lib/auth";
 import { GithubIcon } from "@/components/GithubIcon";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 export function SubmitForm({
   session,
@@ -15,6 +16,7 @@ export function SubmitForm({
   session: UserSession | null;
   userRepos: GitHubUserRepo[];
 }) {
+  const { t } = useLanguage();
   const [repoUrl, setRepoUrl] = useState("");
   const [looking, setLooking] = useState(false);
   const [state, formAction, isPending] = useActionState(submitProjectAction, null);
@@ -37,14 +39,14 @@ export function SubmitForm({
         <label className="text-xs font-medium text-[#8a92a3] flex items-center justify-between">
           <span className="flex items-center gap-2 text-white">
             <GithubIcon className="w-4 h-4 text-white" />
-            Ссылка на репозиторий GitHub *
+            {t.submit.repoUrlLabel}
           </span>
           {!session && (
             <Link
               href="/login"
               className="text-[#e5484d] hover:underline text-[11px]"
             >
-              Войти через GitHub для выбора из своих проектов →
+              {t.submit.loginToPickRepo}
             </Link>
           )}
         </label>
@@ -54,11 +56,11 @@ export function SubmitForm({
           required
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo или owner/repo"
+          placeholder={t.submit.repoUrlPlaceholder}
           className="w-full rounded-lg bg-[#151821] border border-[#1d212b] px-3.5 py-2.5 text-xs text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
         />
         <div className="text-[11px] text-[#8a92a3]">
-          Поддерживаются любые публичные репозитории GitHub.
+          {t.submit.repoUrlHelp}
         </div>
       </div>
 
@@ -67,10 +69,10 @@ export function SubmitForm({
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-white block">
-              Ищу разработчиков / контрибьюторов
+              {t.submit.lookingToggle}
             </span>
             <span className="text-[11px] text-[#8a92a3]">
-              Разместить объявление на доске «Ищут разработчиков»
+              {t.submit.lookingSub}
             </span>
           </div>
           <button
@@ -82,7 +84,7 @@ export function SubmitForm({
                 : "bg-[#0f1117] border border-[#1d212b] text-[#8a92a3] hover:text-white"
             }`}
           >
-            {looking ? "Активно" : "Выключено"}
+            {looking ? t.submit.active : t.submit.disabled}
           </button>
           <input
             type="checkbox"
@@ -98,24 +100,24 @@ export function SubmitForm({
           <div className="pt-3 border-t border-[#1d212b] space-y-3">
             <div className="space-y-1.5">
               <label className="text-[11px] font-medium text-[#8a92a3] block">
-                Требуемый стек и роли (через запятую):
+                {t.submit.rolesTitle}:
               </label>
               <input
                 type="text"
                 name="contributorRoles"
-                placeholder="Frontend (React), Go, DevOps, Rust, UI/UX"
+                placeholder={t.submit.rolesPlaceholder}
                 className="w-full rounded-lg bg-[#0f1117] border border-[#1d212b] px-3 py-2 text-xs text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-medium text-[#8a92a3] block">
-                Фронт работ и задачи:
+                {t.submit.tasksTitle}:
               </label>
               <textarea
                 name="contributorTasks"
                 rows={3}
-                placeholder="Опишите задачи, баги или новые фичи, в которых требуется помощь..."
+                placeholder={t.submit.tasksPlaceholder}
                 className="w-full rounded-lg bg-[#0f1117] border border-[#1d212b] p-3 text-xs text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444] resize-y leading-relaxed"
               />
             </div>
@@ -136,7 +138,7 @@ export function SubmitForm({
         disabled={isPending}
         className="w-full py-2.5 px-4 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] active:scale-[0.99] text-white font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-sm border border-[#e5484d]/40"
       >
-        {isPending ? "Получение данных из GitHub..." : "Добавить репозиторий в каталог"}
+        {isPending ? t.submit.submitting : t.submit.submitBtn}
       </button>
     </form>
   );

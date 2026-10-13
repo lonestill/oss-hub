@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { type Locale, defaultLocale, locales } from "./types";
-import { getDictionary } from "./index";
+import { getDictionary } from "./dictionary";
 
 export async function getLocale(): Promise<Locale> {
   try {

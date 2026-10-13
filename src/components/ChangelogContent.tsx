@@ -12,28 +12,31 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { CHANGELOG_DATA } from "@/lib/changelog-data";
+import { useLanguage } from "@/lib/i18n";
 
 export function ChangelogContent() {
+  const { locale } = useLanguage();
+  const isEn = locale === "en";
   const [filterType, setFilterType] = useState<"all" | "feat" | "fix" | "security">("all");
 
   const badgeTypeConfig = {
     feat: {
-      label: "Новое",
+      label: isEn ? "New" : "Новое",
       color: "bg-[#e5484d]/10 text-[#e5484d] border-[#e5484d]/30",
       icon: Sparkles,
     },
     fix: {
-      label: "Исправлено",
+      label: isEn ? "Fixed" : "Исправлено",
       color: "bg-[#3fb950]/10 text-[#3fb950] border-[#3fb950]/30",
       icon: CheckCircle2,
     },
     security: {
-      label: "Безопасность",
+      label: isEn ? "Security" : "Безопасность",
       color: "bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/30",
       icon: Shield,
     },
     refactor: {
-      label: "Улучшено",
+      label: isEn ? "Improved" : "Улучшено",
       color: "bg-[#d29922]/10 text-[#d29922] border-[#d29922]/30",
       icon: Wrench,
     },
@@ -48,15 +51,17 @@ export function ChangelogContent() {
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#e5484d]/10 text-[#e5484d] text-xs font-semibold border border-[#e5484d]/20">
             <History className="w-3.5 h-3.5" />
-            <span>Хроника изменений</span>
+            <span>{isEn ? "Changelog timeline" : "Хроника изменений"}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-            Changelog платформы
+            {isEn ? "Platform Changelog" : "Changelog платформы"}
           </h1>
 
           <p className="text-sm text-[#8a92a3] leading-relaxed">
-            История доработок платформы без лишней бюрократии и дат: от масштабных архитектурных модулей до правок, о которых даже писать неловко.
+            {isEn
+              ? "The evolution of the platform without bureaucratic fluff: from major architectural modules to small quality-of-life polish."
+              : "История доработок платформы без лишней бюрократии и дат: от масштабных архитектурных модулей до правок, о которых даже писать неловко."}
           </p>
         </div>
       </section>
@@ -65,7 +70,9 @@ export function ChangelogContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1d212b] pb-4">
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-[#8a92a3]" />
-          <span className="text-xs text-[#8a92a3]">Фильтр по типу:</span>
+          <span className="text-xs text-[#8a92a3]">
+            {isEn ? "Filter by type:" : "Фильтр по типу:"}
+          </span>
           <div className="flex items-center bg-[#151821] p-0.5 rounded-lg border border-[#1d212b] text-xs">
             <button
               type="button"
@@ -76,7 +83,7 @@ export function ChangelogContent() {
                   : "text-[#8a92a3] hover:text-white"
               }`}
             >
-              Все
+              {isEn ? "All" : "Все"}
             </button>
             <button
               type="button"
@@ -87,7 +94,7 @@ export function ChangelogContent() {
                   : "text-[#8a92a3] hover:text-white"
               }`}
             >
-              Новые фичи
+              {isEn ? "Features" : "Новые фичи"}
             </button>
             <button
               type="button"
@@ -98,7 +105,7 @@ export function ChangelogContent() {
                   : "text-[#8a92a3] hover:text-white"
               }`}
             >
-              Фиксы
+              {isEn ? "Fixes" : "Фиксы"}
             </button>
             <button
               type="button"
@@ -109,7 +116,7 @@ export function ChangelogContent() {
                   : "text-[#8a92a3] hover:text-white"
               }`}
             >
-              Безопасность
+              {isEn ? "Security" : "Безопасность"}
             </button>
           </div>
         </div>
@@ -214,10 +221,12 @@ export function ChangelogContent() {
       <section className="rounded-2xl border border-[#1d212b] bg-[#0f1117] p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
         <div className="space-y-1">
           <div className="font-semibold text-white">
-            Есть предложения по платформе?
+            {isEn ? "Have suggestions for the platform?" : "Есть предложения по платформе?"}
           </div>
           <p className="text-[#8a92a3]">
-            Предлагайте улучшения в открытом репозитории или вступайте в команду проекта.
+            {isEn
+              ? "Propose improvements in our open-source repo or join the project team."
+              : "Предлагайте улучшения в открытом репозитории или вступайте в команду проекта."}
           </p>
         </div>
 
@@ -226,13 +235,13 @@ export function ChangelogContent() {
             href="/guide"
             className="px-3.5 py-2 rounded-lg border border-[#1d212b] bg-[#151821] hover:border-[#2e3444] text-white font-medium transition-colors"
           >
-            Руководство
+            {isEn ? "Guide" : "Руководство"}
           </Link>
           <Link
             href="/projects/lonestill-oss-hub"
             className="px-4 py-2 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
           >
-            <span>Взять задачу по сайту</span>
+            <span>{isEn ? "Claim a website task" : "Взять задачу по сайту"}</span>
           </Link>
         </div>
       </section>

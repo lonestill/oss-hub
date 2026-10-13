@@ -10,6 +10,7 @@ import {
 import { UserProfileTabs } from "@/components/UserProfileTabs";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getServerTranslations } from "@/lib/i18n/server";
 import {
   ExternalLink,
   MapPin,
@@ -66,23 +67,17 @@ export default async function UserProfilePage({ params }: PageProps) {
   const { username } = await params;
   const cleanUsername = decodeURIComponent(username).trim().replace(/^@/, "");
 
-  const [
-    githubUser,
-    session,
-    userProjects,
-    userComments,
-    userClaims,
-    userTeamApps,
-    userAvailability,
-  ] = await Promise.all([
-    fetchGitHubUserProfile(cleanUsername),
-    getSession(),
-    getProjectsByOwner(cleanUsername),
-    getCommentsByAuthor(cleanUsername),
-    getClaimsByUser(cleanUsername),
-    getTeamApplicationsByUser(cleanUsername),
-    getUserAvailability(cleanUsername),
-  ]);
+  const [{ t }, githubUser, session, userProjects, userComments, userClaims, userTeamApps, userAvailability] =
+    await Promise.all([
+      getServerTranslations(),
+      fetchGitHubUserProfile(cleanUsername),
+      getSession(),
+      getProjectsByOwner(cleanUsername),
+      getCommentsByAuthor(cleanUsername),
+      getClaimsByUser(cleanUsername),
+      getTeamApplicationsByUser(cleanUsername),
+      getUserAvailability(cleanUsername),
+    ]);
 
   if (
     !githubUser &&
@@ -121,7 +116,7 @@ export default async function UserProfilePage({ params }: PageProps) {
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs text-[#8a92a3]">
         <Link href="/" className="hover:text-white transition-colors">
-          Каталог
+          {t.profile.breadcrumbsCatalog}
         </Link>
         <span>/</span>
         <span className="text-white font-medium">@{cleanUsername}</span>
@@ -150,7 +145,7 @@ export default async function UserProfilePage({ params }: PageProps) {
                 </h1>
                 {isOwner && (
                   <span className="px-2 py-0.5 rounded-md bg-[#e5484d]/10 text-[#e5484d] text-xs font-semibold border border-[#e5484d]/20">
-                    Ваш профиль
+                    {t.profile.yourProfileBadge}
                   </span>
                 )}
               </div>
@@ -206,7 +201,7 @@ export default async function UserProfilePage({ params }: PageProps) {
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-[#1d212b] bg-[#151821] hover:border-[#2e3444] text-xs font-medium text-white transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>GitHub профиль</span>
+              <span>{t.profile.githubProfile}</span>
             </a>
           </div>
         </div>
@@ -214,28 +209,28 @@ export default async function UserProfilePage({ params }: PageProps) {
         {/* Platform Telemetry Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-[#1d212b] pt-5 mt-6 text-xs">
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Проектов на платформе</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.profile.statsProjects}</span>
             <span className="text-lg font-bold text-white font-mono mt-0.5 block">
               {userProjects.length}
             </span>
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Задач в работе</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.profile.statsTasks}</span>
             <span className="text-lg font-bold text-[#e5484d] font-mono mt-0.5 block">
               {userClaims.length}
             </span>
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Заявок в команды</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.profile.statsTeams}</span>
             <span className="text-lg font-bold text-[#38bdf8] font-mono mt-0.5 block">
               {userTeamApps.length}
             </span>
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Всего звёзд</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.profile.statsStars}</span>
             <span className="text-lg font-bold text-white font-mono mt-0.5 flex items-center gap-1.5">
               <Star className="w-4 h-4 text-[#e5484d] fill-[#e5484d]" />
               <span>{totalStars.toLocaleString()}</span>

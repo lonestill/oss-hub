@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GitHubIssue } from "@/lib/types";
 import { CircleDot, MessageSquare, ExternalLink, Plus, Tag } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProjectIssuesListProps {
   issues: GitHubIssue[];
@@ -10,6 +11,7 @@ interface ProjectIssuesListProps {
 }
 
 export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
+  const { t, locale } = useLanguage();
   const [filter, setFilter] = useState<"all" | "good-first" | "help-wanted">("all");
 
   const hasGoodFirst = issues.some((i) =>
@@ -43,13 +45,13 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-white">GitHub Issues</h3>
+              <h3 className="text-sm font-semibold text-white">{t.projectPage.issuesTitle}</h3>
               <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[11px] font-mono text-[#8a92a3]">
                 {issues.length}
               </span>
             </div>
             <p className="text-[11px] text-[#8a92a3] mt-0.5">
-              Актуальные открытые задачи прямо из репозитория
+              {t.projectPage.issuesDesc}
             </p>
           </div>
         </div>
@@ -65,7 +67,7 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
                   : "text-[#8a92a3] hover:text-white"
               }`}
             >
-              Все
+              {t.projectPage.issuesAll}
             </button>
             {hasGoodFirst && (
               <button
@@ -100,7 +102,7 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1d212b] bg-[#151821] hover:border-white/20 text-xs font-medium text-white transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Создать</span>
+            <span>{t.projectPage.issuesNew}</span>
           </a>
         </div>
       </div>
@@ -110,8 +112,8 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
         <div className="p-8 text-center">
           <p className="text-xs text-[#8a92a3]">
             {issues.length === 0
-              ? "В репозитории сейчас нет открытых issues."
-              : "Нет задач, подходящих под выбранный фильтр."}
+              ? t.projectPage.issuesEmpty
+              : t.projectPage.noFilteredTasks}
           </p>
           <a
             href={`${repoUrl}/issues`}
@@ -119,7 +121,7 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 mt-3 text-xs text-[#e5484d] hover:underline"
           >
-            <span>Посмотреть все на GitHub</span>
+            <span>{t.projectCard.openOnGithub}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>
@@ -149,11 +151,11 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
                     <span>·</span>
                     {issue.user && (
                       <span className="flex items-center gap-1">
-                        от <span className="text-[#a1a7b5]">{issue.user.login}</span>
+                        {locale === "en" ? "by" : "от"} <span className="text-[#a1a7b5]">{issue.user.login}</span>
                       </span>
                     )}
                     <span>·</span>
-                    <span>{new Date(issue.created_at).toLocaleDateString("ru-RU")}</span>
+                    <span>{new Date(issue.created_at).toLocaleDateString(locale === "en" ? "en-US" : "ru-RU")}</span>
 
                     {/* Labels */}
                     {issue.labels.length > 0 && (
@@ -194,7 +196,7 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-white/10 text-[#8a92a3] hover:text-white transition-all"
-                  title="Открыть на GitHub"
+                  title={locale === "en" ? "Open on GitHub" : "Открыть на GitHub"}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -213,7 +215,7 @@ export function ProjectIssuesList({ issues, repoUrl }: ProjectIssuesListProps) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-[#8a92a3] hover:text-white transition-colors"
           >
-            <span>Смотреть все Issues на GitHub ({issues.length}+)</span>
+            <span>{locale === "en" ? `View all Issues on GitHub (${issues.length}+)` : `Смотреть все Issues на GitHub (${issues.length}+)`}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { type Locale, defaultLocale, locales, type Dictionary } from "./types";
-import { getDictionary } from "./index";
+import { getDictionary } from "./dictionary";
 
 interface LanguageContextType {
   locale: Locale;

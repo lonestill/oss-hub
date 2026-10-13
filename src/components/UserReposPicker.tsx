@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GitHubUserRepo } from "@/lib/user-repos";
 import { Star, Check } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export function UserReposPicker({
   repos,
@@ -11,6 +12,7 @@ export function UserReposPicker({
   repos: GitHubUserRepo[];
   onSelectRepo: (url: string) => void;
 }) {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<string | null>(null);
 
   if (repos.length === 0) {
@@ -21,10 +23,10 @@ export function UserReposPicker({
     <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-4 space-y-3 text-xs">
       <div className="flex items-center justify-between text-xs border-b border-[#1d212b] pb-2.5">
         <span className="font-semibold text-white">
-          Ваши репозитории GitHub ({repos.length})
+          {t.submit.userReposTitle} ({repos.length})
         </span>
         <span className="text-[#8a92a3] text-[11px]">
-          Выбор в один клик
+          {t.submit.oneClickSelect}
         </span>
       </div>
 
@@ -84,10 +86,10 @@ export function UserReposPicker({
                   {isCurrent ? (
                     <span className="flex items-center gap-1">
                       <Check className="w-3 h-3" />
-                      <span>Выбран</span>
+                      <span>{t.submit.selected}</span>
                     </span>
                   ) : (
-                    "Выбрать"
+                    t.submit.select
                   )}
                 </button>
               </div>

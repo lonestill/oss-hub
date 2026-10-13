@@ -6,6 +6,7 @@ import { TaskClaim } from "@/lib/claims";
 import { LayoutDashboard, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { ProjectCrmWorkspace } from "./ProjectCrmWorkspace";
+import { useLanguage } from "@/lib/i18n";
 
 interface OwnerControlPanelProps {
   project: Project;
@@ -18,6 +19,7 @@ export function OwnerControlPanel({
   claims = [],
   teamApplications = [],
 }: OwnerControlPanelProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
   const pendingCount =
@@ -35,19 +37,19 @@ export function OwnerControlPanel({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-white text-sm tracking-tight">
-                Maintainer CRM & Pipeline
+                {t.projectPage.ownerPanelTitle}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#21262d] text-[#8b949e] border border-[#30363d]">
                 @{project.owner_login} / {project.name}
               </span>
               {pendingCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-[#e5484d] text-white text-[10px] font-bold">
-                  +{pendingCount} новых заявок
+                  +{pendingCount} {t.projectPage.newClaims}
                 </span>
               )}
             </div>
             <p className="text-[11px] text-[#8b949e] mt-0.5">
-              Управление воронкой контрибьюторов, задачами, ролями и настройками репозитория
+              {t.projectPage.ownerPanelSubtitle}
             </p>
           </div>
         </div>
@@ -56,9 +58,9 @@ export function OwnerControlPanel({
           <Link
             href={`/projects/${project.slug}/crm`}
             className="px-3.5 py-1.5 rounded-md border border-[#e5484d]/40 bg-[#e5484d]/10 hover:bg-[#e5484d]/20 text-[#e5484d] hover:text-white font-medium text-xs transition-colors flex items-center gap-1.5"
-            title="Открыть полноэкранную CRM на отдельной странице"
+            title={t.projectPage.openFullCrm}
           >
-            <span>Воркспейс CRM</span>
+            <span>{t.projectPage.workspaceCrm}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </Link>
 
@@ -67,7 +69,7 @@ export function OwnerControlPanel({
             onClick={() => setIsOpen(!isOpen)}
             className="px-3 py-1.5 rounded-md border border-[#30363d] bg-[#21262d] hover:bg-[#30363d] text-white font-medium text-xs transition-colors flex items-center gap-1.5"
           >
-            <span>{isOpen ? "Свернуть" : "Быстрый вид"}</span>
+            <span>{isOpen ? t.projectPage.collapse : t.projectPage.quickView}</span>
             {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { ContributorTask, GitHubIssue } from "@/lib/types";
 import { TaskClaim, TaskMessage } from "@/lib/claims";
 import { TaskSourceFilter, TaskStatusFilter } from "./types";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Search,
   Filter,
@@ -75,6 +76,7 @@ export function CrmTasks({
   onLoadTaskMessages,
   onAddNewTask,
 }: CrmTasksProps) {
+  const { t } = useLanguage();
   // Filters State
   const [sourceFilter, setSourceFilter] = useState<TaskSourceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>("all");
@@ -358,7 +360,7 @@ export function CrmTasks({
                   : "text-[#8b949e] hover:text-white"
               }`}
             >
-              Все источники
+              {t.crm.tasks.allSources}
             </button>
             <button
               type="button"
@@ -369,7 +371,7 @@ export function CrmTasks({
                   : "text-[#8b949e] hover:text-white"
               }`}
             >
-              GitHub ({githubIssues.length})
+              {t.crm.tasks.githubSources} ({githubIssues.length})
             </button>
             <button
               type="button"
@@ -380,7 +382,7 @@ export function CrmTasks({
                   : "text-[#8b949e] hover:text-white"
               }`}
             >
-              Свои ({tasks.length})
+              {t.crm.tasks.manualSources} ({tasks.length})
             </button>
           </div>
 
@@ -390,11 +392,11 @@ export function CrmTasks({
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-3 py-1.5 rounded-xl border border-[#30363d] bg-[#0d1117] text-white text-xs focus:outline-none"
           >
-            <option value="all">Любой статус</option>
-            <option value="open">Открыта</option>
-            <option value="in_progress">В работе</option>
-            <option value="review">На проверке (PR)</option>
-            <option value="completed">Завершена</option>
+            <option value="all">{t.crm.tasks.statusAny}</option>
+            <option value="open">{t.crm.tasks.filterOpen}</option>
+            <option value="in_progress">{t.crm.tasks.filterInProgress}</option>
+            <option value="review">{t.crm.tasks.statusReview}</option>
+            <option value="completed">{t.crm.tasks.filterCompleted}</option>
           </select>
         </div>
 
@@ -406,7 +408,7 @@ export function CrmTasks({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по задачам..."
+              placeholder={t.crm.tasks.searchPlaceholder}
               className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#30363d] bg-[#0d1117] text-white placeholder-[#8b949e] focus:outline-none"
             />
           </div>
@@ -418,7 +420,7 @@ export function CrmTasks({
             className="px-3 py-1.5 rounded-xl bg-[#e5484d] hover:bg-[#f2555a] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Добавить задачу</span>
+            <span>{t.crm.tasks.btnNewTask}</span>
           </button>
         </div>
       </div>
@@ -433,14 +435,14 @@ export function CrmTasks({
         >
           {filteredTasks.length === 0 ? (
             <div className="p-12 rounded-2xl border border-[#21262d] bg-[#161b22] text-center space-y-3">
-              <div className="text-xs text-[#8b949e]">Задач по заданным фильтрам не найдено.</div>
+              <div className="text-xs text-[#8b949e]">{t.crm.tasks.noTasksFound}</div>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
                 className="px-4 py-2 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold inline-flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                <span>Создать первую задачу</span>
+                <span>{t.crm.tasks.createFirstTask}</span>
               </button>
             </div>
           ) : (
@@ -474,37 +476,37 @@ export function CrmTasks({
                         >
                           {item.source === "github"
                             ? `#${item.number || "GH"}`
-                            : "Своя задача"}
+                            : t.crm.tasks.manualSources}
                         </span>
 
                         {item.status === "open" && (
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#238636]/15 text-[#3fb950] font-medium">
-                            открыта
+                            {t.crm.tasks.filterOpen.toLowerCase()}
                           </span>
                         )}
                         {item.status === "in_progress" && (
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#d29922]/15 text-[#d29922] font-medium">
-                            в работе
+                            {t.crm.tasks.filterInProgress.toLowerCase()}
                           </span>
                         )}
                         {item.status === "review" && (
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#38bdf8]/15 text-[#38bdf8] font-bold">
-                            PR на проверке
+                            {t.crm.tasks.statusReview}
                           </span>
                         )}
                         {item.status === "completed" && (
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#8b949e]/15 text-[#8b949e] font-medium">
-                            завершена
+                            {t.crm.tasks.filterCompleted.toLowerCase()}
                           </span>
                         )}
 
                         {item.difficulty && (
                           <span className="text-[#8b949e] text-[10px]">
                             {item.difficulty === "easy"
-                              ? "Легкая"
+                              ? t.crm.tasks.difficultyEasy
                               : item.difficulty === "hard"
-                              ? "Сложная"
-                              : "Средняя"}
+                              ? t.crm.tasks.difficultyHard
+                              : t.crm.tasks.difficultyMedium}
                           </span>
                         )}
                       </div>
@@ -534,14 +536,14 @@ export function CrmTasks({
                           <span>@{item.assignee.login}</span>
                         </div>
                       ) : (
-                        <span>Исполнитель не назначен</span>
+                        <span>{t.crm.tasks.noAssignee}</span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       {candidatesCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-[#e5484d]/15 text-[#e5484d] font-mono text-[11px] font-bold">
-                          {candidatesCount} {candidatesCount === 1 ? "отклик" : "отклика"}
+                          {candidatesCount} {t.crm.tasks.candidatesCount}
                         </span>
                       )}
                     </div>
@@ -559,7 +561,7 @@ export function CrmTasks({
             <div className="flex items-start justify-between gap-3 border-b border-[#21262d] pb-4">
               <div>
                 <div className="flex items-center gap-2 text-xs font-mono text-[#8b949e]">
-                  <span>{selectedItem.source === "github" ? "GitHub Issue" : "Задача проекта"}</span>
+                  <span>{selectedItem.source === "github" ? "GitHub Issue" : t.crm.tasks.manualSources}</span>
                   {selectedItem.number && <span>#{selectedItem.number}</span>}
                 </div>
                 <h2 className="text-base font-bold text-white mt-1 leading-snug">
@@ -570,7 +572,7 @@ export function CrmTasks({
                 type="button"
                 onClick={() => setSelectedItemId(null)}
                 className="p-1 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
-                title="Закрыть панель"
+                title={t.common.close}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -580,7 +582,7 @@ export function CrmTasks({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono uppercase text-[#8b949e] font-semibold">
-                  Описание задачи
+                  {t.crm.tasks.taskDescRequirements}
                 </span>
                 {selectedItem.source === "github" ? (
                   <a
@@ -590,7 +592,7 @@ export function CrmTasks({
                     className="text-xs text-[#58a6ff] hover:underline flex items-center gap-1 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    <span>Редактировать issue на GitHub ↗</span>
+                    <span>{t.crm.tasks.openGithubIssue} ↗</span>
                   </a>
                 ) : !isEditingDesc ? (
                   <button
@@ -602,7 +604,7 @@ export function CrmTasks({
                     className="text-xs text-[#8b949e] hover:text-white flex items-center gap-1 transition-colors"
                   >
                     <Edit2 className="w-3 h-3" />
-                    <span>Изменить</span>
+                    <span>{t.common.edit}</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -611,7 +613,7 @@ export function CrmTasks({
                       onClick={() => setIsEditingDesc(false)}
                       className="text-xs text-[#8b949e] hover:text-white transition-colors"
                     >
-                      Отмена
+                      {t.common.cancel}
                     </button>
                     <button
                       type="button"
@@ -619,7 +621,7 @@ export function CrmTasks({
                       className="text-xs text-[#3fb950] font-semibold flex items-center gap-1 hover:underline"
                     >
                       <Save className="w-3 h-3" />
-                      <span>Сохранить</span>
+                      <span>{t.common.save}</span>
                     </button>
                   </div>
                 )}
@@ -642,7 +644,7 @@ export function CrmTasks({
             {/* Current Assignee & Situational Actions */}
             <div className="p-4 rounded-xl border border-[#21262d] bg-[#161b22] space-y-3">
               <span className="text-[11px] font-mono uppercase text-[#8b949e] font-semibold block">
-                Статус и исполнитель
+                {t.common.status} & {t.crm.tasks.statusAssigned}
               </span>
 
               <div className="flex items-center justify-between gap-3">
@@ -664,11 +666,11 @@ export function CrmTasks({
                         <div className="text-xs font-semibold text-white">
                           @{selectedItem.assignee.login}
                         </div>
-                        <div className="text-[11px] text-[#3fb950]">В работе над задачей</div>
+                        <div className="text-[11px] text-[#3fb950]">{t.crm.tasks.assignedWorking}</div>
                       </div>
                     </>
                   ) : (
-                    <div className="text-xs text-[#8b949e]">Исполнитель пока не назначен</div>
+                    <div className="text-xs text-[#8b949e]">{t.crm.tasks.noAssignee}</div>
                   )}
                 </div>
 
@@ -686,17 +688,17 @@ export function CrmTasks({
                             className="px-3 py-1.5 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white font-semibold text-xs transition-colors flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Принять PR / Закрыть</span>
+                            <span>{t.crm.tasks.acceptPrClose}</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => onUnassignTask(assignedClaim.id)}
                             className="px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] hover:bg-[#e5484d]/10 text-[#8b949e] hover:text-[#e5484d] text-xs transition-colors flex items-center gap-1.5"
-                            title="Снять исполнителя и вернуть задачу в бэклог"
+                            title={t.crm.tasks.btnUnassign}
                           >
                             <UserMinus className="w-3.5 h-3.5" />
-                            <span>Снять</span>
+                            <span>{t.crm.tasks.unassign}</span>
                           </button>
                         );
                       })()}
@@ -709,7 +711,7 @@ export function CrmTasks({
                 <div className="p-2.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 text-[#38bdf8]">
                     <GitPullRequest className="w-4 h-4" />
-                    <span className="font-medium">Открыт Pull Request</span>
+                    <span className="font-medium">{t.crm.tasks.pullRequestOpen}</span>
                   </div>
                   <a
                     href={selectedItem.prUrl}
@@ -717,7 +719,7 @@ export function CrmTasks({
                     rel="noopener noreferrer"
                     className="text-[#38bdf8] hover:underline flex items-center gap-1 text-[11px] font-mono"
                   >
-                    <span>Смотреть PR ↗</span>
+                    <span>{t.crm.tasks.openPr} ↗</span>
                   </a>
                 </div>
               )}
@@ -726,15 +728,15 @@ export function CrmTasks({
             {/* Candidates Comparison List */}
             <div className="space-y-3">
               <span className="text-[11px] font-mono uppercase text-[#8b949e] font-semibold flex items-center justify-between">
-                <span>Кандидаты на задачу ({taskCandidates.length})</span>
+                <span>{t.crm.tasks.candidatesTitle} ({taskCandidates.length})</span>
                 <span className="text-[10px] text-[#8b949e] normal-case">
-                  Нажмите на карточку для выбора в диалоге
+                  {t.crm.tasks.clickCandidateHint}
                 </span>
               </span>
 
               {taskCandidates.length === 0 ? (
                 <div className="p-4 rounded-xl border border-[#21262d] bg-[#161b22] text-xs text-[#8b949e] text-center">
-                  По этой задаче пока нет откликов от контрибьюторов.
+                  {t.crm.tasks.noCandidates}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -777,12 +779,12 @@ export function CrmTasks({
                                 </span>
                                 {isAssigned && (
                                   <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#3fb950]/20 text-[#3fb950] font-bold">
-                                    Назначен
+                                    {t.crm.tasks.statusAssigned}
                                   </span>
                                 )}
                                 {isSelectedForChat && (
                                   <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#e5484d]/20 text-[#e5484d] font-bold">
-                                    Выбран в диалоге
+                                    {t.crm.tasks.selectedInChat}
                                   </span>
                                 )}
                               </div>
@@ -803,7 +805,7 @@ export function CrmTasks({
                                   onClick={() => onRejectCandidate(c.id)}
                                   className="px-2.5 py-1 rounded-lg border border-[#30363d] bg-[#0d1117] hover:bg-[#21262d] text-[#8b949e] hover:text-white text-xs transition-colors"
                                 >
-                                  Отклонить
+                                  {t.crm.tasks.btnReject}
                                 </button>
                                 <button
                                   type="button"
@@ -811,7 +813,7 @@ export function CrmTasks({
                                   className="px-3 py-1 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold transition-colors flex items-center gap-1"
                                 >
                                   <UserCheck className="w-3.5 h-3.5" />
-                                  <span>Назначить</span>
+                                  <span>{t.crm.tasks.btnAssign}</span>
                                 </button>
                               </>
                             )}
@@ -830,7 +832,7 @@ export function CrmTasks({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-mono uppercase text-[#e5484d] font-semibold flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Приватные заметки по @{activeClaim.user_login}</span>
+                    <span>{t.crm.tasks.privateNotesOn} @{activeClaim.user_login}</span>
                   </span>
                   <button
                     type="button"
@@ -838,13 +840,13 @@ export function CrmTasks({
                     disabled={isSavingNote}
                     className="text-xs text-[#3fb950] font-semibold hover:underline disabled:opacity-50"
                   >
-                    {isSavingNote ? "Сохранение..." : "Сохранить заметку"}
+                    {isSavingNote ? t.common.saving : t.crm.tasks.saveNotes}
                   </button>
                 </div>
                 <textarea
                   value={privateNoteText}
                   onChange={(e) => setPrivateNoteText(e.target.value)}
-                  placeholder={`Внутренние пометки по кандидату @${activeClaim.user_login}: стек, опыт, дедлайн...`}
+                  placeholder={t.crm.tasks.notesPlaceholder}
                   rows={2}
                   className="w-full p-2.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#e5484d]"
                 />
@@ -856,17 +858,17 @@ export function CrmTasks({
               <div className="space-y-3 pt-2 border-t border-[#21262d]">
                 <span className="text-[11px] font-mono uppercase text-[#8b949e] font-semibold flex items-center gap-1.5">
                   <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Переписка по задаче с @{activeClaim.user_login}</span>
+                  <span>{t.crm.tasks.chatWith} @{activeClaim.user_login}</span>
                 </span>
 
                 <div className="p-3 rounded-xl bg-[#161b22] border border-[#21262d] max-h-48 overflow-y-auto space-y-2.5">
                   {isLoadingChat ? (
                     <div className="text-xs text-[#8b949e] text-center py-4">
-                      Загрузка сообщений...
+                      {t.common.loading}
                     </div>
                   ) : chatMessages.length === 0 ? (
                     <div className="text-xs text-[#8b949e] text-center py-4">
-                      Сообщений пока нет. Напишите исполнителю уточняющий вопрос или детали реализации.
+                      {t.crm.tasks.chatEmpty}
                     </div>
                   ) : (
                     chatMessages.map((m) => {
@@ -879,7 +881,7 @@ export function CrmTasks({
                           }`}
                         >
                           <span className="text-[10px] text-[#8b949e] mb-0.5">
-                            {isMe ? "Вы (мейнтейнер)" : `@${m.sender_login}`}
+                            {isMe ? t.crm.tasks.youMaintainer : `@${m.sender_login}`}
                           </span>
                           <div
                             className={`p-2.5 rounded-xl max-w-[85%] leading-relaxed ${
@@ -902,7 +904,7 @@ export function CrmTasks({
                     type="text"
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
-                    placeholder="Написать кандидату..."
+                    placeholder={t.crm.tasks.chatPlaceholder}
                     className="flex-1 px-3 py-2 text-xs rounded-xl border border-[#30363d] bg-[#161b22] text-white placeholder-[#8b949e] focus:outline-none"
                   />
                   <button
@@ -926,7 +928,7 @@ export function CrmTasks({
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-[#e5484d]" />
-                <span>Создать новую задачу проекта</span>
+                <span>{t.crm.tasks.createTaskModalTitle}</span>
               </h3>
               <button
                 type="button"
@@ -940,13 +942,13 @@ export function CrmTasks({
             <form onSubmit={handleCreateTask} className="space-y-3.5">
               <div>
                 <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-                  Название задачи
+                  {t.crm.tasks.taskTitle}
                 </label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Например: Добавить локализацию UI (RU / EN)"
+                  placeholder="Task title..."
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl border border-[#30363d] bg-[#161b22] text-white focus:outline-none"
                 />
@@ -954,7 +956,7 @@ export function CrmTasks({
 
               <div>
                 <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-                  Сложность
+                  {t.crm.tasks.taskDifficulty}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -966,7 +968,7 @@ export function CrmTasks({
                         : "border-[#30363d] bg-[#161b22] text-[#8b949e]"
                     }`}
                   >
-                    Легкая
+                    {t.crm.tasks.difficultyEasy}
                   </button>
                   <button
                     type="button"
@@ -977,7 +979,7 @@ export function CrmTasks({
                         : "border-[#30363d] bg-[#161b22] text-[#8b949e]"
                     }`}
                   >
-                    Средняя
+                    {t.crm.tasks.difficultyMedium}
                   </button>
                   <button
                     type="button"
@@ -988,14 +990,14 @@ export function CrmTasks({
                         : "border-[#30363d] bg-[#161b22] text-[#8b949e]"
                     }`}
                   >
-                    Сложная
+                    {t.crm.tasks.difficultyHard}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-                  Теги / Стек (через запятую)
+                  {t.crm.tasks.taskTags}
                 </label>
                 <input
                   type="text"
@@ -1008,12 +1010,12 @@ export function CrmTasks({
 
               <div>
                 <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-                  Описание и требования
+                  {t.crm.tasks.taskDescRequirements}
                 </label>
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Опишите контекст, ссылки на файлы и ожидаемый результат..."
+                  placeholder="..."
                   rows={4}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-[#30363d] bg-[#161b22] text-white focus:outline-none"
                 />
@@ -1025,14 +1027,14 @@ export function CrmTasks({
                   onClick={() => setIsAddModalOpen(false)}
                   className="px-3.5 py-1.5 rounded-xl border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white text-xs font-medium"
                 >
-                  Отмена
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={!newTitle.trim()}
                   className="px-4 py-1.5 rounded-xl bg-[#e5484d] hover:bg-[#f2555a] text-white text-xs font-semibold transition-colors disabled:opacity-50"
                 >
-                  Создать задачу
+                  {t.crm.tasks.btnNewTask}
                 </button>
               </div>
             </form>

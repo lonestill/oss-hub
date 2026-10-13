@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Project, ContributionMode } from "@/lib/types";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Save,
   Check,
@@ -38,6 +39,7 @@ export function CrmSettings({
   onSaveContribution,
   onRescanGithub,
 }: CrmSettingsProps) {
+  const { t } = useLanguage();
   // Block 1: General State
   const [description, setDescription] = useState(project.description || "");
   const [contactUrl, setContactUrl] = useState(project.contact_url || "");
@@ -119,9 +121,9 @@ export function CrmSettings({
     setRescanFeedback(null);
     try {
       await onRescanGithub();
-      setRescanFeedback("Синхронизировано успешно!");
+      setRescanFeedback(t.crm.settings.syncSuccess);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка синхронизации";
+      const msg = err instanceof Error ? err.message : t.common.error;
       setRescanFeedback(msg);
     } finally {
       setIsRescanning(false);
@@ -132,13 +134,13 @@ export function CrmSettings({
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-base font-bold text-white">Настройки репозитория</h2>
+        <h2 className="text-base font-bold text-white">{t.crm.settings.title}</h2>
         <p className="text-xs text-[#8b949e] mt-0.5">
-          Каждый блок сохраняется независимо, чтобы не терять введенные данные
+          {t.crm.settings.subtitle}
         </p>
       </div>
 
-      {/* Блок 1: Основное */}
+      {/* Block 1: General */}
       <form
         onSubmit={handleSaveGeneral}
         className="p-6 rounded-2xl border border-[#21262d] bg-[#161b22] space-y-4"
@@ -146,11 +148,11 @@ export function CrmSettings({
         <div className="flex items-center justify-between border-b border-[#21262d] pb-3">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-[#38bdf8]" />
-            <h3 className="text-sm font-bold text-white">Основная информация</h3>
+            <h3 className="text-sm font-bold text-white">{t.crm.settings.generalTitle}</h3>
           </div>
           {isGeneralDirty && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#d29922]/20 text-[#d29922] font-semibold">
-              Есть несохранённые правки
+              {t.crm.settings.unsavedChanges}
             </span>
           )}
         </div>
@@ -160,10 +162,10 @@ export function CrmSettings({
           <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#30363d] bg-[#0d1117]">
             <div>
               <div className="text-xs font-semibold text-white">
-                Поиск контрибьюторов на платформе
+                {t.crm.settings.lookingToggle}
               </div>
               <div className="text-[11px] text-[#8b949e] mt-0.5">
-                Показывать репозиторий в каталоге с бейджем «Ищет помощь»
+                {t.crm.settings.lookingToggleDesc}
               </div>
             </div>
             <button
@@ -182,27 +184,27 @@ export function CrmSettings({
           {/* Description */}
           <div>
             <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-              Краткое описание проекта для витрины
+              {t.crm.settings.descLabel}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full p-3 rounded-xl border border-[#30363d] bg-[#0d1117] text-xs text-white focus:outline-none focus:border-[#e5484d]"
-              placeholder="Опишите ценность репозитория, архитектуру и задачи..."
+              placeholder="..."
             />
           </div>
 
           {/* Contact URL */}
           <div>
             <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-              Прямой контакт для связи (Telegram, Discord, Email)
+              {t.crm.settings.contactLabel}
             </label>
             <input
               type="text"
               value={contactUrl}
               onChange={(e) => setContactUrl(e.target.value)}
-              placeholder="https://t.me/username или @username"
+              placeholder="https://t.me/username"
               className="w-full px-3 py-2 text-xs rounded-xl border border-[#30363d] bg-[#0d1117] text-white focus:outline-none focus:border-[#e5484d]"
             />
           </div>
@@ -213,7 +215,7 @@ export function CrmSettings({
             {savedGeneralFeedback && (
               <span className="text-xs text-[#3fb950] font-medium flex items-center gap-1.5">
                 <Check className="w-4 h-4" />
-                <span>Основное сохранено!</span>
+                <span>{t.crm.settings.savedGeneral}</span>
               </span>
             )}
             {generalError && (
@@ -229,12 +231,13 @@ export function CrmSettings({
             className="px-4 py-1.5 rounded-xl bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-40"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isSavingGeneral ? "Сохранение..." : "Сохранить основное"}</span>
+            <span>{isSavingGeneral ? t.common.saving : t.crm.settings.saveGeneral}</span>
           </button>
         </div>
       </form>
 
       {/* Блок 2: Контрибьюция */}
+      {/* Block 2: Contribution */}
       <form
         onSubmit={handleSaveContrib}
         className="p-6 rounded-2xl border border-[#21262d] bg-[#161b22] space-y-4"
@@ -242,11 +245,11 @@ export function CrmSettings({
         <div className="flex items-center justify-between border-b border-[#21262d] pb-3">
           <div className="flex items-center gap-2">
             <Terminal className="w-4 h-4 text-[#e5484d]" />
-            <h3 className="text-sm font-bold text-white">Контрибьюция и онбординг</h3>
+            <h3 className="text-sm font-bold text-white">{t.crm.settings.contribTitle}</h3>
           </div>
           {isContribDirty && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#d29922]/20 text-[#d29922] font-semibold">
-              Есть несохранённые правки
+              {t.crm.settings.unsavedChanges}
             </span>
           )}
         </div>
@@ -255,7 +258,7 @@ export function CrmSettings({
           {/* Modes Checkboxes */}
           <div>
             <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-2">
-              Активные сценарии участия в проекте:
+              {t.crm.settings.modesLabel}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <label
@@ -272,7 +275,7 @@ export function CrmSettings({
                   onChange={() => {}}
                   className="hidden"
                 />
-                <span className="font-semibold">Разовые задачи</span>
+                <span className="font-semibold">{t.crm.settings.modeTasks}</span>
               </label>
 
               <label
@@ -289,7 +292,7 @@ export function CrmSettings({
                   onChange={() => {}}
                   className="hidden"
                 />
-                <span className="font-semibold">Набор в команду</span>
+                <span className="font-semibold">{t.crm.settings.modeTeam}</span>
               </label>
 
               <label
@@ -306,7 +309,7 @@ export function CrmSettings({
                   onChange={() => {}}
                   className="hidden"
                 />
-                <span className="font-semibold">Онбординг & .env</span>
+                <span className="font-semibold">{t.crm.settings.modeOnboarding}</span>
               </label>
             </div>
           </div>
@@ -314,7 +317,7 @@ export function CrmSettings({
           {/* Quickstart Command */}
           <div>
             <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-              Команда быстрого старта (Quickstart command)
+              {t.crm.settings.quickstartLabel}
             </label>
             <input
               type="text"
@@ -328,7 +331,7 @@ export function CrmSettings({
           {/* Env Example */}
           <div>
             <label className="text-[11px] font-mono text-[#8b949e] uppercase block mb-1">
-              Шаблон переменных окружения (.env.example)
+              {t.crm.settings.envExampleLabel}
             </label>
             <textarea
               value={envExample}
@@ -345,7 +348,7 @@ export function CrmSettings({
             {savedContribFeedback && (
               <span className="text-xs text-[#3fb950] font-medium flex items-center gap-1.5">
                 <Check className="w-4 h-4" />
-                <span>Контрибьюция сохранена!</span>
+                <span>{t.crm.settings.savedContrib}</span>
               </span>
             )}
             {contribError && (
@@ -361,17 +364,17 @@ export function CrmSettings({
             className="px-4 py-1.5 rounded-xl bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-40"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isSavingContrib ? "Сохранение..." : "Сохранить контрибьюцию"}</span>
+            <span>{isSavingContrib ? t.common.saving : t.crm.settings.saveOnboarding}</span>
           </button>
         </div>
       </form>
 
-      {/* Блок 3: Интеграция с GitHub */}
+      {/* Block 3: GitHub Integration */}
       <div className="p-6 rounded-2xl border border-[#21262d] bg-[#161b22] space-y-4">
         <div className="flex items-center justify-between border-b border-[#21262d] pb-3">
           <div className="flex items-center gap-2">
             <GitBranch className="w-4 h-4 text-white" />
-            <h3 className="text-sm font-bold text-white">Интеграция с GitHub</h3>
+            <h3 className="text-sm font-bold text-white">{t.crm.settings.githubTitle}</h3>
           </div>
           <span className="text-xs font-mono text-[#8b949e]">
             {project.full_name}
@@ -380,10 +383,10 @@ export function CrmSettings({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="p-3.5 rounded-xl border border-[#30363d] bg-[#0d1117] space-y-1">
-            <span className="text-[11px] text-[#8b949e] block font-mono">Статус синхронизации</span>
+            <span className="text-[11px] text-[#8b949e] block font-mono">{t.crm.settings.syncStatus}</span>
             <div className="text-white font-medium flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#3fb950]" />
-              <span>Репозиторий подключен</span>
+              <span>{t.crm.settings.repoConnected}</span>
             </div>
             <div className="text-[11px] text-[#8b949e] font-mono mt-1">
               Issues: {project.open_issues} · Stars: {project.stars}
@@ -391,13 +394,13 @@ export function CrmSettings({
           </div>
 
           <div className="p-3.5 rounded-xl border border-[#30363d] bg-[#0d1117] space-y-1">
-            <span className="text-[11px] text-[#8b949e] block font-mono">Оценка антифрода</span>
+            <span className="text-[11px] text-[#8b949e] block font-mono">{t.crm.settings.moderationScore}</span>
             <div className="text-white font-medium flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-[#38bdf8]" />
               <span>{project.moderation_score ?? 100} / 100</span>
             </div>
             <div className="text-[11px] text-[#8b949e]">
-              Статус проверки: {project.moderation_status || "approved"}
+              {t.crm.settings.verificationStatus} {project.moderation_status || "approved"}
             </div>
           </div>
         </div>
@@ -413,7 +416,7 @@ export function CrmSettings({
             className="px-4 py-1.5 rounded-xl border border-[#30363d] bg-[#0d1117] hover:bg-[#21262d] text-white text-xs font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? "animate-spin" : ""}`} />
-            <span>{isRescanning ? "Синхронизация..." : "Синхронизировать с GitHub"}</span>
+            <span>{isRescanning ? t.crm.settings.syncingBtn : t.crm.settings.syncBtn}</span>
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileText, History, Tag, ExternalLink, Calendar, User } from "lucide-react";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { GitHubRelease } from "@/lib/types";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProjectDocsTabsProps {
   readmeContent: string | null;
@@ -18,6 +19,7 @@ export function ProjectDocsTabs({
   repoFullName,
   repoUrl,
 }: ProjectDocsTabsProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"readme" | "changelog">("readme");
 
   return (
@@ -35,7 +37,7 @@ export function ProjectDocsTabs({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>README.md</span>
+            <span>{t.projectPage.docsReadme}</span>
           </button>
 
           <button
@@ -48,7 +50,7 @@ export function ProjectDocsTabs({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Changelog / Релизы</span>
+            <span>{t.projectPage.docsChangelog}</span>
             {releases.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px] font-mono">
                 {releases.length}
@@ -63,7 +65,7 @@ export function ProjectDocsTabs({
           rel="noopener noreferrer"
           className="text-xs text-[#8a92a3] hover:text-white transition-colors flex items-center gap-1"
         >
-          <span>{activeTab === "readme" ? "README на GitHub" : "Все релизы на GitHub"}</span>
+          <span>{activeTab === "readme" ? t.projectPage.docsReadmeGithub : t.projectPage.docsAllReleasesGithub}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>
@@ -75,7 +77,7 @@ export function ProjectDocsTabs({
             <MarkdownViewer content={readmeContent} repoFullName={repoFullName} />
           ) : (
             <div className="py-12 text-center text-[#8a92a3] text-xs">
-              README файл отсутствует или пуст в этом репозитории.
+              {t.projectPage.docsEmptyReadme}
             </div>
           )
         ) : (
@@ -83,10 +85,10 @@ export function ProjectDocsTabs({
             <div className="flex items-center justify-between border-b border-[#1d212b] pb-3">
               <div>
                 <h3 className="text-sm font-bold text-white">
-                  История релизов и обновлений
+                  {t.projectPage.docsHistoryTitle}
                 </h3>
                 <p className="text-xs text-[#8a92a3] mt-0.5">
-                  Данные автоматически подтягиваются из GitHub Releases репозитория.
+                  {t.projectPage.docsHistoryDesc}
                 </p>
               </div>
             </div>

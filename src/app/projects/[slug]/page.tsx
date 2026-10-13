@@ -11,6 +11,7 @@ import { ProjectIssuesList } from "@/components/ProjectIssuesList";
 import { ProjectDocsTabs } from "@/components/ProjectDocsTabs";
 import { ContributorFastTrack } from "@/components/ContributorFastTrack";
 import { getClaimsByProject, getTeamApplicationsByProject } from "@/lib/claims";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const { t } = await getServerTranslations();
   const session = await getSession();
   const isAdmin = session ? await isUserAdmin(session.login) : false;
   const isOwner = Boolean(
@@ -65,8 +67,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       {project.moderation_status === "rejected" && (
         <div className="p-4 rounded-xl border border-[#e5484d]/40 bg-[#e5484d]/10 text-[#e5484d] text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold">ПРОЕКТ ОТКЛОНЁН:</span>
-            <span>Этот репозиторий заблокирован администратором и скрыт из общего доступа.</span>
+            <span className="font-bold">{t.projectPage.rejectedTitle}:</span>
+            <span>{t.projectPage.rejectedDesc}</span>
           </div>
           <span className="font-mono text-[10px] uppercase font-bold">REJECTED</span>
         </div>
@@ -75,8 +77,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       {project.moderation_status === "pending" && (
         <div className="p-4 rounded-xl border border-[#d29922]/40 bg-[#d29922]/10 text-[#d29922] text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold">НА МОДЕРАЦИИ:</span>
-            <span>Репозиторий проходит проверку безопасности и виден только вам. В общем каталоге он появится после подтверждения.</span>
+            <span className="font-bold">{t.projectPage.pendingTitle}:</span>
+            <span>{t.projectPage.pendingDesc}</span>
           </div>
           <span className="font-mono text-[10px] uppercase font-bold">PENDING</span>
         </div>
@@ -84,7 +86,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       {/* Breadcrumbs Navigation */}
       <div className="flex items-center gap-2 text-xs text-[#8a92a3]">
         <Link href="/" className="hover:text-white transition-colors">
-          Каталог
+          {t.projectPage.breadcrumbsCatalog}
         </Link>
         <span>/</span>
         <span className="text-white font-medium truncate">{project.full_name}</span>
@@ -145,7 +147,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                 className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#e5484d] hover:bg-[#f2555a] text-white font-semibold transition-all shadow-sm shadow-[#e5484d]/25 active:scale-95"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Управлять проектом</span>
+                <span>{t.projectPage.manageProject}</span>
                 {attentionCount > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full bg-black/40 text-white text-[10px] font-bold font-mono border border-white/20">
                     {attentionCount}
@@ -161,7 +163,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1d212b] bg-[#151821] hover:border-[#2e3444] text-white transition-colors"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>Сайт</span>
+                <span>{t.projectPage.website}</span>
               </a>
             )}
             <a
@@ -179,13 +181,13 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 
         {/* Description */}
         <p className="text-sm text-[#d1d5db] leading-relaxed max-w-3xl mb-6">
-          {project.description || "Описание репозитория отсутствует."}
+          {project.description || t.projectPage.noDescription}
         </p>
 
         {/* Telemetry Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-[#1d212b] pt-4 text-xs">
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Звёзды</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.projectPage.stars}</span>
             <span className="text-base font-bold text-white font-mono mt-0.5 flex items-center gap-1.5">
               <Star className="w-3.5 h-3.5 text-[#e5484d] fill-[#e5484d]" />
               <span>{project.stars.toLocaleString()}</span>
@@ -193,7 +195,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Форки</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.projectPage.forks}</span>
             <span className="text-base font-bold text-white font-mono mt-0.5 flex items-center gap-1.5">
               <GitFork className="w-3.5 h-3.5 text-[#8a92a3]" />
               <span>{project.forks.toLocaleString()}</span>
@@ -201,16 +203,16 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Открытые issue</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.projectPage.issues}</span>
             <span className="text-base font-bold text-white font-mono mt-0.5 block">
               {project.open_issues}
             </span>
           </div>
 
           <div className="rounded-xl border border-[#1d212b] bg-[#151821] p-3">
-            <span className="text-[11px] text-[#8a92a3] block">Основной язык</span>
+            <span className="text-[11px] text-[#8a92a3] block">{t.projectPage.primaryLanguage}</span>
             <span className="text-base font-bold text-white mt-0.5 block">
-              {project.language || "Не указан"}
+              {project.language || t.projectPage.notSpecified}
             </span>
           </div>
         </div>
@@ -219,12 +221,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
       {/* Maintainer Verification Prompt if guest */}
       {!session && project.owner_login && (
         <div className="rounded-xl border border-[#1d212b] bg-[#0f1117] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#8a92a3]">
-          <span>Вы автор этого репозитория (@{project.owner_login})?</span>
+          <span>{t.projectPage.areYouOwner.replace("{owner}", project.owner_login)}</span>
           <Link
             href="/login"
             className="text-white hover:text-[#e5484d] transition-colors font-medium"
           >
-            Войти через GitHub для управления →
+            {t.projectPage.loginToManage}
           </Link>
         </div>
       )}

@@ -41,6 +41,7 @@ import {
   Info,
 } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 interface ContributorFastTrackProps {
   project: Project;
@@ -59,6 +60,7 @@ export function ContributorFastTrack({
   currentUserAvatar,
   currentUserName,
 }: ContributorFastTrackProps) {
+  const { t } = useLanguage();
   const activeModes: ContributionMode[] =
     project.modes && project.modes.length > 0
       ? project.modes
@@ -152,10 +154,10 @@ export function ContributorFastTrack({
       id: `gh_${issue.number}`,
       number: issue.number,
       title: issue.title,
-      description: issue.body ? issue.body.slice(0, 180) + "..." : "Открытый тикет из GitHub Issues.",
+      description: issue.body ? issue.body.slice(0, 180) + "..." : t.projectPage.githubIssue,
       difficulty: (isGoodFirst ? "easy" : isHard ? "hard" : "medium") as "easy" | "medium" | "hard",
       tags: issue.labels.map((l) => l.name),
-      estimated_time: isGoodFirst ? "1-2 часа" : undefined,
+      estimated_time: isGoodFirst ? "1-2h" : undefined,
       source: "github" as const,
       isManual: false,
     };
@@ -175,8 +177,8 @@ export function ContributorFastTrack({
       ? project.team_roles_data
       : project.contributor_roles.map((r) => ({
           role: r,
-          commitment: "5-10 ч/нед",
-          description: "Участие в развитии архитектуры, разработка ключевых компонентов и ревью.",
+          commitment: "5-10h/week",
+          description: t.projectPage.defaultRoleDesc,
         }));
 
   // Architecture items
@@ -267,7 +269,7 @@ export function ContributorFastTrack({
 
   async function handleCancelClaim() {
     if (!activeDiscussionClaim) return;
-    const confirmed = window.confirm("Вы уверены, что хотите снять свою заявку и отказаться от задачи?");
+    const confirmed = window.confirm(t.projectPage.cancelClaimConfirm);
     if (!confirmed) return;
 
     setIsCancelingClaim(true);
@@ -300,15 +302,15 @@ export function ContributorFastTrack({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-bold text-white tracking-tight">
-                Центр контрибуции
+                {t.projectPage.centerContribution}
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] text-[11px] font-medium flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#3fb950] animate-pulse"></span>
-                Вся работа и связь на сайте
+                {t.projectPage.allOnSite}
               </span>
             </div>
             <p className="text-xs text-[#8a92a3] mt-1 max-w-xl">
-              Бери реальные задачи, откликайся в команду или запускай проект за 2 минуты без внешних ссылок и лишней бюрократии.
+              {t.projectPage.centerDesc}
             </p>
           </div>
         </div>
@@ -325,7 +327,7 @@ export function ContributorFastTrack({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Задачи ({tasksList.length})</span>
+              <span>{t.projectPage.tasksTab} ({tasksList.length})</span>
             </button>
           )}
 
@@ -339,7 +341,7 @@ export function ContributorFastTrack({
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>В команду ({teamRoles.length})</span>
+              <span>{t.projectPage.teamTab} ({teamRoles.length})</span>
             </button>
           )}
 
@@ -353,7 +355,7 @@ export function ContributorFastTrack({
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              <span>Онбординг</span>
+              <span>{t.projectPage.onboardingTab}</span>
             </button>
           )}
         </div>
@@ -365,7 +367,7 @@ export function ContributorFastTrack({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-white">
-                Доступные задачи и отклики
+                {t.projectPage.availableTasks}
               </span>
               <span className="text-[11px] font-mono text-[#8a92a3]">
                 ({filteredTasks.length})
@@ -384,7 +386,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Все ({tasksList.length})
+                  {t.projectPage.allSources} ({tasksList.length})
                 </button>
                 <button
                   onClick={() => setFilterSource("manual")}
@@ -394,7 +396,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Задачи проекта ({manualItems.length})
+                  {t.projectPage.manualTasks} ({manualItems.length})
                 </button>
                 <button
                   onClick={() => setFilterSource("github")}
@@ -418,7 +420,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Все сложности
+                  {t.projectPage.allDifficulties}
                 </button>
                 <button
                   onClick={() => setFilterDifficulty("easy")}
@@ -428,7 +430,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Легко
+                  {t.projectPage.easy}
                 </button>
                 <button
                   onClick={() => setFilterDifficulty("medium")}
@@ -438,7 +440,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Средне
+                  {t.projectPage.medium}
                 </button>
                 <button
                   onClick={() => setFilterDifficulty("hard")}
@@ -448,7 +450,7 @@ export function ContributorFastTrack({
                       : "text-[#8a92a3] hover:text-white"
                   }`}
                 >
-                  Сложно
+                  {t.projectPage.hard}
                 </button>
               </div>
             </div>
@@ -469,9 +471,9 @@ export function ContributorFastTrack({
                   Boolean(currentUserLogin && claim && claim.user_login.toLowerCase() === currentUserLogin.toLowerCase());
 
                 const badge = {
-                  easy: { label: "Легко", color: "text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/20" },
-                  medium: { label: "Средне", color: "text-[#d29922] bg-[#d29922]/10 border-[#d29922]/20" },
-                  hard: { label: "Архитектура", color: "text-[#e5484d] bg-[#e5484d]/10 border-[#e5484d]/20" },
+                  easy: { label: t.projectPage.easy, color: "text-[#3fb950] bg-[#3fb950]/10 border-[#3fb950]/20" },
+                  medium: { label: t.projectPage.medium, color: "text-[#d29922] bg-[#d29922]/10 border-[#d29922]/20" },
+                  hard: { label: t.projectPage.hard, color: "text-[#e5484d] bg-[#e5484d]/10 border-[#e5484d]/20" },
                 }[task.difficulty];
 
                 return (
@@ -486,7 +488,7 @@ export function ContributorFastTrack({
                             {badge.label}
                           </span>
                           <span className="px-2 py-0.5 rounded-md bg-[#181d28] border border-white/5 text-[10px] font-mono text-[#8a92a3]">
-                            {task.isManual ? "Задача проекта" : "GitHub Issue"}
+                            {task.isManual ? t.projectPage.taskProject : t.projectPage.githubIssue}
                           </span>
                         </div>
 
@@ -503,16 +505,16 @@ export function ContributorFastTrack({
                               }`}
                             >
                               {claim.status === "assigned"
-                                ? `В работе у @${claim.user_login}`
+                                ? t.projectPage.statusAssigned.replace("{login}", claim.user_login)
                                 : claim.status === "completed"
-                                ? "PR отправлен / Завершено"
-                                : `Отклик от @${claim.user_login}`}
+                                ? t.projectPage.statusCompleted
+                                : t.projectPage.statusPending.replace("{login}", claim.user_login)}
                             </span>
                           </div>
                         ) : (
                           <span className="text-[11px] text-[#3fb950] font-medium flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
-                            <span>Свободна</span>
+                            <span>{t.projectPage.statusAvailable}</span>
                           </span>
                         )}
                       </div>
@@ -547,7 +549,7 @@ export function ContributorFastTrack({
                           className="px-3 py-1.5 rounded-lg border border-[#2e3444] bg-[#151821] hover:border-white/30 text-white font-medium text-xs transition-colors flex items-center gap-1.5 w-full justify-center"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-[#38bdf8]" />
-                          <span>Обсуждение задачи</span>
+                          <span>{t.projectPage.taskDiscussion}</span>
                           {claim.messages_count ? (
                             <span className="px-1.5 py-0.2 rounded-full bg-white/10 font-mono text-[10px]">
                               {claim.messages_count}
@@ -555,7 +557,7 @@ export function ContributorFastTrack({
                           ) : null}
                           {isClaimedByMe && (
                             <span className="ml-1 text-[10px] text-[#3fb950] font-semibold">
-                              (Вы исполнитель)
+                              {t.projectPage.youAreAssignee}
                             </span>
                           )}
                         </button>
@@ -565,7 +567,7 @@ export function ContributorFastTrack({
                           onClick={() => setSelectedTaskForClaim(task)}
                           className="px-3 py-1.5 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold text-xs transition-colors shadow-sm w-full border border-[#e5484d]/40"
                         >
-                          Взять задачу прямо на сайте →
+                          {t.projectPage.takeTaskAction}
                         </button>
                       )}
                     </div>
@@ -575,7 +577,7 @@ export function ContributorFastTrack({
             </div>
           ) : (
             <div className="p-8 text-center border border-dashed border-[#1d212b] rounded-xl text-[#8a92a3] text-xs">
-              Задач с выбранным фильтром нет.
+              {t.projectPage.noFilteredTasks}
             </div>
           )}
         </div>
@@ -587,10 +589,10 @@ export function ContributorFastTrack({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-white">
-                Вакансии и постоянные роли в команду
+                {t.projectPage.teamOpeningsTitle}
               </h3>
               <p className="text-xs text-[#8a92a3] mt-0.5">
-                Подай заявку прямо на платформе — автор рассмотрит её в своей панели управления.
+                {t.projectPage.teamOpeningsDesc}
               </p>
             </div>
           </div>
@@ -614,7 +616,7 @@ export function ContributorFastTrack({
                   </div>
 
                   <p className="text-xs text-[#8a92a3] leading-relaxed">
-                    {roleItem.description || "Участие в развитии проекта, ревью кода и создание новых фичей."}
+                    {roleItem.description || t.projectPage.defaultRoleDesc}
                   </p>
                 </div>
 
@@ -625,7 +627,7 @@ export function ContributorFastTrack({
                     className="w-full px-3 py-1.5 rounded-lg bg-[#38bdf8] hover:bg-[#0284c7] text-black font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Users className="w-3.5 h-3.5" />
-                    <span>Подать заявку в команду</span>
+                    <span>{t.projectPage.applyToTeamBtn}</span>
                   </button>
                 </div>
               </div>
@@ -642,7 +644,7 @@ export function ContributorFastTrack({
             <div className="flex items-center justify-between text-xs">
               <span className="text-white font-semibold flex items-center gap-1.5">
                 <Terminal className="w-4 h-4 text-[#3fb950]" />
-                <span>Быстрый запуск dev-окружения (1-liner setup):</span>
+                <span>{t.projectPage.quickstartSetup}</span>
               </span>
               <span className="text-[11px] font-mono text-[#8a92a3]">
                 Bash / Terminal
@@ -660,12 +662,12 @@ export function ContributorFastTrack({
                 {copiedQuickstart ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-[#3fb950]" />
-                    <span className="text-[#3fb950]">Скопировано</span>
+                    <span className="text-[#3fb950]">{t.projectPage.copied}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5 text-[#8a92a3]" />
-                    <span>Копировать</span>
+                    <span>{t.projectPage.copy}</span>
                   </>
                 )}
               </button>
@@ -678,7 +680,7 @@ export function ContributorFastTrack({
               <div className="flex items-center gap-2">
                 <FileCode className="w-4 h-4 text-[#e5484d]" />
                 <span className="text-xs font-semibold text-white">
-                  Карта архитектуры — с каких файлов начать:
+                  {t.projectPage.archMapTitle}
                 </span>
               </div>
 
@@ -709,18 +711,18 @@ export function ContributorFastTrack({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-white font-semibold flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-[#38bdf8]" />
-                  <span>Шаблон переменных окружения (.env.example):</span>
+                  <span>{t.projectPage.envExampleTitle}</span>
                 </span>
                 <button
                   onClick={handleCopyEnv}
                   className="text-[11px] text-[#8a92a3] hover:text-white flex items-center gap-1"
                 >
                   {copiedEnv ? (
-                    <span className="text-[#3fb950] font-medium">Скопировано</span>
+                    <span className="text-[#3fb950] font-medium">{t.projectPage.copied}</span>
                   ) : (
                     <>
                       <Copy className="w-3 h-3" />
-                      <span>Скопировать .env</span>
+                      <span>{t.projectPage.copyEnvBtn}</span>
                     </>
                   )}
                 </button>
@@ -747,7 +749,7 @@ export function ContributorFastTrack({
 
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#e5484d] block">
-                Отклик на задачу прямо на сайте
+                {t.projectPage.claimModalTitle}
               </span>
               <h3 className="text-base font-bold text-white mt-1">
                 #{selectedTaskForClaim.number} {selectedTaskForClaim.title}
@@ -757,26 +759,26 @@ export function ContributorFastTrack({
             {!currentUserLogin ? (
               <div className="p-4 rounded-xl bg-[#151821] border border-[#1d212b] space-y-3 text-center">
                 <p className="text-xs text-[#8a92a3]">
-                  Чтобы занять задачу и общаться с мейнтейнером, войдите через GitHub.
+                  {t.projectPage.loginToClaim}
                 </p>
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-white border border-[#2e3444] hover:border-white/20 font-semibold text-xs transition-colors"
                 >
-                  Войти через GitHub
+                  {t.projectPage.signInGithub}
                 </Link>
               </div>
             ) : (
               <form onSubmit={handleClaimSubmit} className="space-y-3.5">
                 <div>
                   <label className="text-xs text-[#8a92a3] block mb-1.5">
-                    Как планируете решить задачу (стек, опыт или вопросы к автору):
+                    {t.projectPage.pitchLabel}
                   </label>
                   <textarea
                     rows={4}
                     value={claimPitch}
                     onChange={(e) => setClaimPitch(e.target.value)}
-                    placeholder="Например: Сделаю рефакторинг роутов на Zod, есть опыт в похожем проекте. Готов сделать за пару дней..."
+                    placeholder={t.projectPage.pitchPlaceholder}
                     className="w-full rounded-xl bg-[#090b10] border border-[#1d212b] p-3 text-xs text-white focus:outline-none focus:border-[#e5484d] resize-y"
                     required
                   />
@@ -790,7 +792,7 @@ export function ContributorFastTrack({
 
                 {claimStatusMsg?.success && (
                   <div className="text-xs text-[#3fb950] p-3 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/20 font-medium">
-                    Заявка отправлена автору! Вы можете отслеживать её статус на этой странице.
+                    {t.projectPage.pitchSuccess}
                   </div>
                 )}
 
@@ -800,14 +802,14 @@ export function ContributorFastTrack({
                     onClick={() => setSelectedTaskForClaim(null)}
                     className="px-3 py-1.5 rounded-lg border border-[#1d212b] text-[#8a92a3] hover:text-white text-xs"
                   >
-                    Отмена
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={isPendingClaim || !claimPitch.trim()}
                     className="px-4 py-2 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold text-xs transition-colors disabled:opacity-50"
                   >
-                    {isPendingClaim ? "Отправка..." : "Отправить отклик автору"}
+                    {isPendingClaim ? t.projectPage.sending : t.projectPage.sendClaimBtn}
                   </button>
                 </div>
               </form>
@@ -829,7 +831,7 @@ export function ContributorFastTrack({
 
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#38bdf8] block">
-                Заявка в команду проекта
+                {t.projectPage.teamApplyTitle}
               </span>
               <h3 className="text-base font-bold text-white mt-1">
                 {selectedRoleForApply.role}
@@ -839,26 +841,26 @@ export function ContributorFastTrack({
             {!currentUserLogin ? (
               <div className="p-4 rounded-xl bg-[#151821] border border-[#1d212b] space-y-3 text-center">
                 <p className="text-xs text-[#8a92a3]">
-                  Чтобы подать заявку в команду, необходимо войти через GitHub.
+                  {t.projectPage.loginToApplyTeam}
                 </p>
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-white border border-[#2e3444] hover:border-white/20 font-semibold text-xs transition-colors"
                 >
-                  Войти через GitHub
+                  {t.projectPage.signInGithub}
                 </Link>
               </div>
             ) : (
               <form onSubmit={handleTeamApplySubmit} className="space-y-3.5">
                 <div>
                   <label className="text-xs text-[#8a92a3] block mb-1.5">
-                    Ваш опыт, стек и ссылки на проекты/код:
+                    {t.projectPage.experienceLabel}
                   </label>
                   <textarea
                     rows={4}
                     value={teamExperience}
                     onChange={(e) => setTeamExperience(e.target.value)}
-                    placeholder="Расскажите, чем занимались, ссылки на репозитории или портфолио..."
+                    placeholder={t.projectPage.experiencePlaceholder}
                     className="w-full rounded-xl bg-[#090b10] border border-[#1d212b] p-3 text-xs text-white focus:outline-none focus:border-[#38bdf8] resize-y"
                     required
                   />
@@ -866,13 +868,13 @@ export function ContributorFastTrack({
 
                 <div>
                   <label className="text-xs text-[#8a92a3] block mb-1.5">
-                    Контакты для связи (Telegram, Discord или Email):
+                    {t.projectPage.contactsLabel}
                   </label>
                   <input
                     type="text"
                     value={teamContacts}
                     onChange={(e) => setTeamContacts(e.target.value)}
-                    placeholder="@telegram_handle или username@example.com"
+                    placeholder={t.projectPage.contactsPlaceholder}
                     className="w-full rounded-lg bg-[#090b10] border border-[#1d212b] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38bdf8]"
                   />
                 </div>
@@ -885,7 +887,7 @@ export function ContributorFastTrack({
 
                 {teamStatusMsg?.success && (
                   <div className="text-xs text-[#3fb950] p-3 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/20 font-medium">
-                    Заявка в команду отправлена! Мейнтейнер свяжется с вами.
+                    {t.projectPage.teamApplySuccess}
                   </div>
                 )}
 
@@ -895,14 +897,14 @@ export function ContributorFastTrack({
                     onClick={() => setSelectedRoleForApply(null)}
                     className="px-3 py-1.5 rounded-lg border border-[#1d212b] text-[#8a92a3] hover:text-white text-xs"
                   >
-                    Отмена
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={isPendingTeam || !teamExperience.trim()}
                     className="px-4 py-2 rounded-lg bg-[#38bdf8] hover:bg-[#0284c7] text-black font-semibold text-xs transition-colors disabled:opacity-50"
                   >
-                    {isPendingTeam ? "Отправка..." : "Отправить заявку"}
+                    {isPendingTeam ? t.projectPage.sending : t.projectPage.sendTeamApplyBtn}
                   </button>
                 </div>
               </form>
@@ -925,7 +927,7 @@ export function ContributorFastTrack({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[#38bdf8] block">
-                  Тред задачи #{activeDiscussionClaim.issue_number}
+                  {t.projectPage.threadTitle} #{activeDiscussionClaim.issue_number}
                 </span>
                 <h3 className="text-base font-bold text-white mt-1">
                   {activeDiscussionClaim.issue_title}
@@ -937,10 +939,10 @@ export function ContributorFastTrack({
                   disabled={isCancelingClaim}
                   onClick={handleCancelClaim}
                   className="px-2.5 py-1 rounded-lg border border-[#e5484d]/30 bg-[#e5484d]/10 hover:bg-[#e5484d]/20 text-[#e5484d] text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
-                  title="Отказаться от задачи и освободить её для других"
+                  title={t.projectPage.cancelClaimHint}
                 >
                   <UserX className="w-3.5 h-3.5" />
-                  <span>{isCancelingClaim ? "Снятие..." : "Снять заявку"}</span>
+                  <span>{isCancelingClaim ? t.projectPage.canceling : t.projectPage.cancelClaimBtn}</span>
                 </button>
               )}
             </div>
@@ -949,10 +951,10 @@ export function ContributorFastTrack({
             <div className="p-3 rounded-xl bg-[#090b10] border border-[#1d212b] text-xs space-y-1">
               <div className="flex items-center justify-between text-[#8a92a3] text-[11px]">
                 <span className="font-semibold text-white">
-                  Отклик @{activeDiscussionClaim.user_login}:
+                  {t.projectPage.claimAuthorPitch.replace("{login}", activeDiscussionClaim.user_login)}
                 </span>
                 <span className="font-mono">
-                  {new Date(activeDiscussionClaim.created_at).toLocaleDateString("ru-RU")}
+                  {new Date(activeDiscussionClaim.created_at).toLocaleDateString()}
                 </span>
               </div>
               <p className="text-[#d1d5db] leading-relaxed">
@@ -965,7 +967,7 @@ export function ContributorFastTrack({
               <div className="p-3 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/20 text-xs flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <GitPullRequest className="w-4 h-4 text-[#38bdf8]" />
-                  <span className="text-white font-medium">Прикреплённый Pull Request:</span>
+                  <span className="text-white font-medium">{t.projectPage.attachedPr}</span>
                 </div>
                 <a
                   href={activeDiscussionClaim.pr_url}
@@ -973,7 +975,7 @@ export function ContributorFastTrack({
                   rel="noopener noreferrer"
                   className="text-[#38bdf8] hover:underline font-mono text-[11px] flex items-center gap-1"
                 >
-                  <span>Открыть PR</span>
+                  <span>{t.projectPage.openPr}</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -983,7 +985,7 @@ export function ContributorFastTrack({
                   type="url"
                   value={newPrUrl}
                   onChange={(e) => setNewPrUrl(e.target.value)}
-                  placeholder="https://github.com/.../pull/123"
+                  placeholder={t.projectPage.attachPrPlaceholder}
                   className="flex-1 rounded-lg bg-[#090b10] border border-[#1d212b] px-3 py-1.5 text-xs text-white"
                   required
                 />
@@ -991,7 +993,7 @@ export function ContributorFastTrack({
                   type="submit"
                   className="px-3 py-1.5 rounded-lg bg-[#38bdf8] text-black font-semibold text-xs whitespace-nowrap"
                 >
-                  Прикрепить PR
+                  {t.projectPage.attachPrBtn}
                 </button>
               </form>
             ) : null}
@@ -1000,11 +1002,11 @@ export function ContributorFastTrack({
             <div className="flex-1 overflow-y-auto space-y-2.5 p-3 rounded-xl bg-[#090b10] border border-[#1d212b] min-h-[140px] max-h-[260px]">
               {isLoadingMessages ? (
                 <div className="text-center py-6 text-xs text-[#8a92a3]">
-                  Загрузка сообщений...
+                  {t.projectPage.loadingMessages}
                 </div>
               ) : discussionMessages.length === 0 ? (
                 <div className="text-center py-6 text-xs text-[#8a92a3]">
-                  Сообщений в треде пока нет. Напишите автору или исполнителю прямо здесь.
+                  {t.projectPage.noMessages}
                 </div>
               ) : (
                 discussionMessages.map((msg) => (
@@ -1021,12 +1023,12 @@ export function ContributorFastTrack({
                         @{msg.sender_login}
                         {msg.is_author && (
                           <span className="px-1 py-0.2 rounded bg-[#e5484d]/20 text-[#e5484d] text-[9px] font-bold">
-                            Мейнтейнер
+                            {t.projectPage.maintainerBadge}
                           </span>
                         )}
                       </span>
                       <span>
-                        {new Date(msg.created_at).toLocaleTimeString("ru-RU", {
+                        {new Date(msg.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -1045,7 +1047,7 @@ export function ContributorFastTrack({
                   type="text"
                   value={newMessageText}
                   onChange={(e) => setNewMessageText(e.target.value)}
-                  placeholder="Написать сообщение..."
+                  placeholder={t.projectPage.writeMessagePlaceholder}
                   className="flex-1 rounded-lg bg-[#090b10] border border-[#1d212b] px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38bdf8]"
                   required
                 />
@@ -1055,15 +1057,15 @@ export function ContributorFastTrack({
                   className="px-4 py-2 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-white border border-[#2e3444] hover:border-[#38bdf8]/50 font-semibold text-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
                 >
                   <Send className="w-3.5 h-3.5 text-[#38bdf8]" />
-                  <span>Отправить</span>
+                  <span>{t.projectPage.sendBtn}</span>
                 </button>
               </form>
             ) : (
               <div className="text-center text-xs text-[#8a92a3] pt-1">
                 <Link href="/login" className="text-white hover:underline">
-                  Войдите через GitHub
+                  {t.projectPage.signInGithub}
                 </Link>
-                , чтобы участвовать в переписке.
+                {t.projectPage.loginToChat}
               </div>
             )}
           </div>

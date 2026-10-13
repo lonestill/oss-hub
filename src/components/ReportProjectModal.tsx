@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Flag, X, AlertTriangle, Check } from "lucide-react";
 import { reportProjectAction } from "@/app/actions";
+import { useLanguage } from "@/lib/i18n";
 
 interface ReportProjectModalProps {
   projectId: string;
@@ -10,6 +11,7 @@ interface ReportProjectModalProps {
 }
 
 export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModalProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,10 +51,10 @@ export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModa
         type="button"
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#1d212b] bg-[#151821] hover:border-[#e5484d]/40 text-[#8a92a3] hover:text-[#e5484d] transition-colors text-xs"
-        title="Пожаловаться на нарушение или фрод"
+        title={t.projectPage.reportBtn}
       >
         <Flag className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Пожаловаться</span>
+        <span className="hidden sm:inline">{t.projectPage.reportBtn}</span>
       </button>
 
       {isOpen && (
@@ -61,7 +63,7 @@ export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModa
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-white font-semibold text-sm">
                 <AlertTriangle className="w-4 h-4 text-[#e5484d]" />
-                <span>Жалоба на репозиторий</span>
+                <span>{t.projectPage.reportTitle}</span>
               </div>
               <button
                 type="button"
@@ -75,12 +77,12 @@ export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModa
             {isSuccess ? (
               <div className="p-4 rounded-xl border border-[#3fb950]/30 bg-[#3fb950]/10 text-[#3fb950] text-xs flex items-center gap-3">
                 <Check className="w-5 h-5 shrink-0" />
-                <span>Жалоба принята модерацией и будет рассмотрена в ближайшее время.</span>
+                <span>{t.projectPage.reportSuccess}</span>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <p className="text-xs text-[#8b949e] leading-relaxed">
-                  Опишите замеченное нарушение (вредоносный код, спам, присвоение чужого авторства, накрутка метрик или неактуальный контент).
+                  {t.projectPage.reportDesc}
                 </p>
 
                 {error && (
@@ -92,7 +94,7 @@ export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModa
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Причина жалобы и факты..."
+                  placeholder={t.projectPage.reportPlaceholder}
                   rows={4}
                   required
                   className="w-full px-3 py-2 text-xs rounded-xl border border-[#30363d] bg-[#161b22] text-white placeholder-[#8b949e] focus:outline-none focus:border-[#e5484d]"
@@ -104,14 +106,14 @@ export function ReportProjectModal({ projectId, projectSlug }: ReportProjectModa
                     onClick={() => setIsOpen(false)}
                     className="px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white text-xs font-medium transition-colors"
                   >
-                    Отмена
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || !reason.trim()}
                     className="px-4 py-1.5 rounded-lg bg-[#e5484d] hover:bg-[#f2555a] text-white text-xs font-semibold transition-colors disabled:opacity-50"
                   >
-                    {isSubmitting ? "Отправка..." : "Отправить жалобу"}
+                    {isSubmitting ? t.projectPage.reportSubmitting : t.projectPage.reportSubmitBtn}
                   </button>
                 </div>
               </form>

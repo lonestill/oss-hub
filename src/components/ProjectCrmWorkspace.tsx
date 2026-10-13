@@ -28,6 +28,7 @@ import { CrmHeader } from "./crm/CrmHeader";
 import { CrmSidebar } from "./crm/CrmSidebar";
 import { CrmOverview } from "./crm/CrmOverview";
 import { CrmTasks } from "./crm/CrmTasks";
+import { useLanguage } from "@/lib/i18n";
 import { CrmTeam } from "./crm/CrmTeam";
 import { CrmSettings } from "./crm/CrmSettings";
 
@@ -49,6 +50,7 @@ export function ProjectCrmWorkspace({
   sessionUserLogin,
 }: ProjectCrmWorkspaceProps) {
   const router = useRouter();
+  const { locale } = useLanguage();
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
   const [claims, setClaims] = useState<TaskClaim[]>(initialClaims);
   const [teamApplications, setTeamApplications] = useState<TeamApplication[]>(initialTeamApps);
@@ -63,8 +65,8 @@ export function ProjectCrmWorkspace({
       ? project.team_roles_data
       : project.contributor_roles.map((r) => ({
           role: r,
-          commitment: "5-10 ч/нед",
-          description: "Участие в развитии репозитория, код-ревью и реализация фич.",
+          commitment: locale === "en" ? "5-10 hrs/week" : "5-10 ч/нед",
+          description: locale === "en" ? "Repository maintenance, code reviews, and feature delivery." : "Участие в развитии репозитория, код-ревью и реализация фич.",
         }));
   const [teamRoles, setTeamRoles] = useState<TeamRoleItem[]>(initialTeamRoles);
 
@@ -105,7 +107,7 @@ export function ProjectCrmWorkspace({
   const handleAssignCandidate = async (claimId: string, prUrl?: string) => {
     const res = await updateClaimStatusAction(claimId, project.slug, "assigned", prUrl);
     if (res && "error" in res && res.error) {
-      alert(`Ошибка назначения: ${res.error}`);
+      alert(locale === "en" ? `Assignment error: ${res.error}` : `Ошибка назначения: ${res.error}`);
       return;
     }
 
@@ -133,7 +135,7 @@ export function ProjectCrmWorkspace({
   const handleRejectCandidate = async (claimId: string) => {
     const res = await updateClaimStatusAction(claimId, project.slug, "rejected");
     if (res && "error" in res && res.error) {
-      alert(`Ошибка: ${res.error}`);
+      alert(locale === "en" ? `Error: ${res.error}` : `Ошибка: ${res.error}`);
       return;
     }
     setClaims((prev) =>
@@ -144,7 +146,7 @@ export function ProjectCrmWorkspace({
   const handleUnassignTask = async (claimId: string) => {
     const res = await updateClaimStatusAction(claimId, project.slug, "pending");
     if (res && "error" in res && res.error) {
-      alert(`Ошибка снятия: ${res.error}`);
+      alert(locale === "en" ? `Unassign error: ${res.error}` : `Ошибка снятия: ${res.error}`);
       return;
     }
     setClaims((prev) =>
@@ -155,7 +157,7 @@ export function ProjectCrmWorkspace({
   const handleCompleteTask = async (claimId: string) => {
     const res = await updateClaimStatusAction(claimId, project.slug, "completed");
     if (res && "error" in res && res.error) {
-      alert(`Ошибка завершения задачи: ${res.error}`);
+      alert(locale === "en" ? `Completion error: ${res.error}` : `Ошибка завершения задачи: ${res.error}`);
       return;
     }
     setClaims((prev) =>
@@ -166,7 +168,7 @@ export function ProjectCrmWorkspace({
   const handleSaveClaimNotes = async (claimId: string, notes: string) => {
     const res = await updateClaimNotesAction(claimId, project.slug, notes);
     if (res && "error" in res && res.error) {
-      alert(`Ошибка сохранения заметок: ${res.error}`);
+      alert(locale === "en" ? `Save notes error: ${res.error}` : `Ошибка сохранения заметок: ${res.error}`);
       return;
     }
     setClaims((prev) =>
@@ -177,7 +179,7 @@ export function ProjectCrmWorkspace({
   const handleSendTaskMessage = async (claimId: string, content: string) => {
     const res = await sendTaskMessageAction(claimId, project.slug, content);
     if (res && "error" in res && res.error) {
-      alert(`Ошибка отправки сообщения: ${res.error}`);
+      alert(locale === "en" ? `Send message error: ${res.error}` : `Ошибка отправки сообщения: ${res.error}`);
       return;
     }
     setClaims((prev) =>
@@ -199,7 +201,7 @@ export function ProjectCrmWorkspace({
         prev.map((a) => (a.id === appId ? { ...a, status: "accepted" } : a))
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка принятия заявки";
+      const msg = err instanceof Error ? err.message : (locale === "en" ? "Failed to accept application" : "Ошибка принятия заявки");
       alert(msg);
     }
   };
@@ -211,7 +213,7 @@ export function ProjectCrmWorkspace({
         prev.map((a) => (a.id === appId ? { ...a, status: "rejected" } : a))
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка отклонения заявки";
+      const msg = err instanceof Error ? err.message : (locale === "en" ? "Failed to reject application" : "Ошибка отклонения заявки");
       alert(msg);
     }
   };

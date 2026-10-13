@@ -54,10 +54,10 @@ export default async function LoginPage({
           <div className="pt-4 border-t border-[#1d212b] space-y-3">
             <div className="flex items-center gap-1.5 text-[#f5a623] font-semibold text-[11px] uppercase tracking-wider">
               <Zap className="w-3.5 h-3.5" />
-              <span>Локальная разработка (Dev-вход)</span>
+              <span>{t.login.localDevTitle}</span>
             </div>
             <p className="text-[11px] text-[#8a92a3] leading-relaxed">
-              GitHub OAuth настроен на прод-домен Vercel. Для работы на localhost используй быстрый вход:
+              {t.login.localDevDesc}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <a
@@ -65,14 +65,14 @@ export default async function LoginPage({
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#1e2330] hover:bg-[#282f42] text-white border border-[#2e3444] rounded-lg font-medium text-[11px] transition-colors"
               >
                 <User className="w-3 h-3 text-[#388bfd]" />
-                <span>как lonestill</span>
+                <span>{t.login.asLonestill}</span>
               </a>
               <a
                 href={`/api/auth/dev?login=contributor&returnUrl=${encodeURIComponent(returnUrl)}`}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#1e2330] hover:bg-[#282f42] text-white border border-[#2e3444] rounded-lg font-medium text-[11px] transition-colors"
               >
                 <User className="w-3 h-3 text-[#3fb950]" />
-                <span>как контрибьютор</span>
+                <span>{t.login.asContributor}</span>
               </a>
             </div>
           </div>

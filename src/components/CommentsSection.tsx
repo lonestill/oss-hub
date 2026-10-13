@@ -6,6 +6,7 @@ import { addCommentAction, deleteCommentAction } from "@/app/actions";
 import { UserSession } from "@/lib/auth";
 import Link from "next/link";
 import { MessageSquare, Trash2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface CommentsSectionProps {
   projectId: string;
@@ -24,6 +25,7 @@ export function CommentsSection({
   ownerLogin,
   isAdmin = false,
 }: CommentsSectionProps) {
+  const { t } = useLanguage();
   const formRef = useRef<HTMLFormElement>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
   const [state, formAction, isPending] = useActionState(async (prev: { error?: string } | null, formData: FormData) => {
@@ -40,7 +42,7 @@ export function CommentsSection({
   const canModerate = isCurrentSessionOwner || isAdmin;
 
   const handleDelete = (commentId: string) => {
-    if (!window.confirm("Удалить этот комментарий?")) return;
+    if (!window.confirm(t.projectPage.commentsDeleteConfirm)) return;
     startDeleteTransition(async () => {
       await deleteCommentAction(commentId, slug);
     });
@@ -53,12 +55,12 @@ export function CommentsSection({
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-[#8a92a3]" />
           <span className="font-semibold text-white">
-            Обсуждение ({comments.length})
+            {t.projectPage.commentsTitle} ({comments.length})
           </span>
         </div>
         {isCurrentSessionOwner && (
           <span className="px-2 py-0.5 rounded-md bg-[#e5484d]/10 text-[#e5484d] text-[11px] font-semibold border border-[#e5484d]/20">
-            Режим автора
+            {t.projectPage.commentsAuthorMode}
           </span>
         )}
       </div>
@@ -121,9 +123,9 @@ export function CommentsSection({
               className="w-full bg-[#0f1117] border border-[#1d212b] px-3 py-1.5 rounded-lg text-xs text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444]"
             />
             <div className="text-[11px] text-[#8a92a3] flex items-center justify-between pt-0.5">
-              <span>Гостевой режим</span>
+              <span>Guest</span>
               <Link href="/login" className="text-white hover:underline">
-                Войти через GitHub →
+                {t.projectPage.signInGithub} →
               </Link>
             </div>
           </div>
@@ -134,7 +136,7 @@ export function CommentsSection({
             name="content"
             required
             rows={3}
-            placeholder="Задайте вопрос автору или предложите помощь..."
+            placeholder={t.projectPage.commentsPlaceholder}
             className="w-full bg-[#0f1117] border border-[#1d212b] p-3 rounded-lg text-xs text-white placeholder-[#586071] focus:outline-none focus:border-[#2e3444] resize-y"
           />
         </div>
@@ -149,7 +151,7 @@ export function CommentsSection({
             disabled={isPending}
             className="px-4 py-2 rounded-lg bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold text-xs transition-colors disabled:opacity-50 shadow-sm border border-[#e5484d]/40"
           >
-            {isPending ? "Отправка..." : "Отправить"}
+            {isPending ? t.projectPage.commentsSubmitting : t.projectPage.commentsSubmit}
           </button>
         </div>
       </form>
@@ -158,7 +160,7 @@ export function CommentsSection({
       <div className="space-y-2.5">
         {comments.length === 0 ? (
           <div className="py-8 text-center text-[#8a92a3] text-xs rounded-xl border border-dashed border-[#1d212b]">
-            Пока нет комментариев. Начните обсуждение первым.
+            {t.projectPage.commentsEmpty}
           </div>
         ) : (
           comments.map((comment) => {
@@ -214,7 +216,7 @@ export function CommentsSection({
                           {comment.author_name}
                         </span>
                         <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#8a92a3] text-[10px] font-medium shrink-0">
-                          Гость
+                          Guest
                         </span>
                         {comment.author_handle && (
                           <span className="text-[#8a92a3] text-[11px] truncate">
@@ -226,7 +228,7 @@ export function CommentsSection({
 
                     {isMaintainer && (
                       <span className="px-1.5 py-0.5 rounded bg-[#e5484d] text-white text-[10px] font-semibold shrink-0">
-                        Автор
+                        {t.projectPage.maintainerBadge}
                       </span>
                     )}
                   </div>
