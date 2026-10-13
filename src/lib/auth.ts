@@ -6,12 +6,16 @@ export interface UserSession {
   name: string | null;
   avatar_url: string;
   token?: string;
+  exp?: number;
+  iat?: number;
 }
 
 import { client, initDb } from "./db";
 
 const COOKIE_NAME = "oss_hub_sess_v3";
 const ADMIN_COOKIE_NAME = "oss_admin_sess_v3";
+const USER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 export async function isUserAdmin(login?: string | null): Promise<boolean> {
   if (!login) return false;
@@ -29,12 +33,19 @@ export async function isUserAdmin(login?: string | null): Promise<boolean> {
 }
 
 function getSecretKey(): string {
-  return (
+  const customSecret =
     process.env.SESSION_SECRET ||
     process.env.ADMIN_PASSWORD ||
-    process.env.TURSO_AUTH_TOKEN ||
-    "oss-hub-dev-insecure-secret-key-change-me"
-  );
+    process.env.TURSO_AUTH_TOKEN;
+
+  if (!customSecret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRITICAL SECURITY ERROR: SESSION_SECRET is not configured in production environment!");
+    }
+    return "oss-hub-dev-insecure-secret-key-change-me";
+  }
+
+  return customSecret;
 }
 
 function signPayload(payload: string): string {
@@ -71,6 +82,10 @@ export async function getSession(): Promise<UserSession | null> {
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64").toString("utf-8"));
     if (parsed && typeof parsed.login === "string") {
+      // Check expiration if present
+      if (parsed.exp && typeof parsed.exp === "number" && Date.now() > parsed.exp) {
+        return null;
+      }
       return parsed as UserSession;
     }
   } catch (err) {
@@ -82,16 +97,22 @@ export async function getSession(): Promise<UserSession | null> {
 
 export async function setSession(user: UserSession) {
   const cookieStore = await cookies();
-  const rawJson = JSON.stringify(user);
-  const base64 = Buffer.from(rawJson).toString("base64");
-  const signed = signPayload(base64);
+  const now = Date.now();
+  const payloadData: UserSession = {
+    ...user,
+    iat: now,
+    exp: now + USER_SESSION_TTL_MS,
+  };
+  const rawJson = JSON.stringify(payloadData);
+  const base64Payload = Buffer.from(rawJson).toString("base64");
+  const signed = signPayload(base64Payload);
 
   cookieStore.set(COOKIE_NAME, signed, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: Math.floor(USER_SESSION_TTL_MS / 1000),
   });
 }
 
@@ -103,9 +124,11 @@ export async function clearSession() {
 
 export async function isAdminAuthenticated(): Promise<boolean> {
   const session = await getSession();
-  if (!session || !(await isUserAdmin(session.login))) {
-    return false;
-  }
+  if (!session) return false;
+
+  const isAdmin = await isUserAdmin(session.login);
+  if (!isAdmin) return false;
+
   const cookieStore = await cookies();
   const rawAdmin = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   if (!rawAdmin) return false;
@@ -115,8 +138,15 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64").toString("utf-8"));
-    if (parsed && parsed.admin === session.login.toLowerCase() && typeof parsed.ts === "number") {
-      return true;
+    if (
+      parsed &&
+      parsed.admin === session.login.toLowerCase() &&
+      typeof parsed.ts === "number"
+    ) {
+      // Validate TTL: must not be expired
+      if (Date.now() - parsed.ts < ADMIN_SESSION_TTL_MS) {
+        return true;
+      }
     }
   } catch {
     return false;
@@ -136,8 +166,13 @@ export async function setAdminSession(password: string): Promise<boolean> {
     return false;
   }
 
+  const now = Date.now();
   const adminPayload = Buffer.from(
-    JSON.stringify({ admin: session.login.toLowerCase(), ts: Date.now() })
+    JSON.stringify({
+      admin: session.login.toLowerCase(),
+      ts: now,
+      exp: now + ADMIN_SESSION_TTL_MS,
+    })
   ).toString("base64");
   const signedAdmin = signPayload(adminPayload);
 
@@ -147,14 +182,33 @@ export async function setAdminSession(password: string): Promise<boolean> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: Math.floor(ADMIN_SESSION_TTL_MS / 1000),
   });
   return true;
+}
+
+export async function forceSetAdminSession(login: string) {
+  const now = Date.now();
+  const adminPayload = Buffer.from(
+    JSON.stringify({
+      admin: login.toLowerCase(),
+      ts: now,
+      exp: now + ADMIN_SESSION_TTL_MS,
+    })
+  ).toString("base64");
+  const signedAdmin = signPayload(adminPayload);
+
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_COOKIE_NAME, signedAdmin, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: Math.floor(ADMIN_SESSION_TTL_MS / 1000),
+  });
 }
 
 export async function clearAdminSession() {
   const cookieStore = await cookies();
   cookieStore.delete(ADMIN_COOKIE_NAME);
 }
-
-

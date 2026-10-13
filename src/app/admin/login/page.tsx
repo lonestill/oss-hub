@@ -97,6 +97,17 @@ export default async function AdminLoginPage({
           >
             Подтвердить и войти
           </button>
+
+          {process.env.NODE_ENV !== "production" && (
+            <div className="pt-3 border-t border-[#1d212b] text-center">
+              <a
+                href="/api/auth/dev?login=lonestill&admin=true&returnUrl=/admin"
+                className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 bg-[#1e2330] hover:bg-[#282f42] text-[#f5a623] border border-[#2e3444] rounded-lg font-medium text-[11px] transition-colors"
+              >
+                ⚡ Dev: Войти в админку в 1 клик
+              </a>
+            </div>
+          )}
         </form>
       </div>
     </div>

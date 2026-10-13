@@ -1,6 +1,7 @@
-import { getProjectBySlug } from "@/lib/projects";
+import { getProjectBySlug, getProjectsByOwner } from "@/lib/projects";
 import { getSession } from "@/lib/auth";
-import { getClaimsByProject, getTeamApplicationsByProject } from "@/lib/claims";
+import { getMaintainerClaimsByProject, getTeamApplicationsByProject } from "@/lib/claims";
+import { fetchGitHubIssues } from "@/lib/github";
 import { notFound, redirect } from "next/navigation";
 import { ProjectCrmWorkspace } from "@/components/ProjectCrmWorkspace";
 import type { Metadata } from "next";
@@ -83,10 +84,13 @@ export default async function ProjectCrmPage({ params }: PageProps) {
     );
   }
 
-  // Load claims & applications for this project
-  const [claims, teamApplications] = await Promise.all([
-    getClaimsByProject(project.id),
+  // Load claims, applications, GitHub issues & maintainer projects
+  const [owner, repo] = project.full_name.split("/");
+  const [claims, teamApplications, githubIssues, userProjects] = await Promise.all([
+    getMaintainerClaimsByProject(project.id),
     getTeamApplicationsByProject(project.id),
+    owner && repo ? fetchGitHubIssues(owner, repo) : Promise.resolve([]),
+    getProjectsByOwner(session.login),
   ]);
 
   return (
@@ -94,6 +98,8 @@ export default async function ProjectCrmPage({ params }: PageProps) {
       project={project}
       claims={claims}
       teamApplications={teamApplications}
+      githubIssues={githubIssues}
+      userProjects={userProjects}
       sessionUserLogin={session.login}
     />
   );

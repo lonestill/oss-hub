@@ -68,12 +68,15 @@ export function ContributorFastTrack({
   const [copiedQuickstart, setCopiedQuickstart] = useState(false);
   const [copiedEnv, setCopiedEnv] = useState(false);
   const [filterDifficulty, setFilterDifficulty] = useState<"all" | "easy" | "medium" | "hard">("all");
+  const [filterSource, setFilterSource] = useState<"all" | "manual" | "github">("all");
 
   // Modal: Claim Task
   const [selectedTaskForClaim, setSelectedTaskForClaim] = useState<{
+    id?: string;
     number: number;
     title: string;
     description?: string;
+    source?: "github" | "manual";
   } | null>(null);
   const [claimPitch, setClaimPitch] = useState("");
   const [claimStatusMsg, setClaimStatusMsg] = useState<{ error?: string; success?: boolean } | null>(null);
@@ -113,51 +116,57 @@ export function ContributorFastTrack({
     setTimeout(() => setCopiedEnv(false), 2000);
   }
 
-  // Build unified tasks list
+  // Build unified tasks list: both local manual tasks and GitHub issues together
   const customTasks: ContributorTask[] = project.parsed_tasks || [];
-  const tasksList =
-    customTasks.length > 0
-      ? customTasks.map((t, idx) => ({
-          number: idx + 1,
-          title: t.title,
-          description: t.description,
-          difficulty: t.difficulty,
-          tags: t.tags || [],
-          estimated_time: t.estimated_time,
-          isManual: true,
-        }))
-      : issues.map((issue) => {
-          const isGoodFirst = issue.labels.some((l) => {
-            const name = l.name.toLowerCase();
-            return (
-              name.includes("good first") ||
-              name.includes("beginner") ||
-              name.includes("easy") ||
-              name.includes("first-timers")
-            );
-          });
-          const isHard = issue.labels.some((l) => {
-            const name = l.name.toLowerCase();
-            return (
-              name.includes("hard") ||
-              name.includes("complex") ||
-              name.includes("architecture")
-            );
-          });
-          return {
-            number: issue.number,
-            title: issue.title,
-            description: issue.body ? issue.body.slice(0, 180) + "..." : "Открытый тикет из GitHub Issues.",
-            difficulty: (isGoodFirst ? "easy" : isHard ? "hard" : "medium") as "easy" | "medium" | "hard",
-            tags: issue.labels.map((l) => l.name),
-            estimated_time: isGoodFirst ? "1-2 часа" : undefined,
-            isManual: false,
-          };
-        });
+  const manualItems = customTasks.map((t, idx) => ({
+    id: t.id,
+    number: t.issue_number || idx + 1,
+    title: t.title,
+    description: t.description,
+    difficulty: t.difficulty,
+    tags: t.tags || [],
+    estimated_time: t.estimated_time,
+    source: "manual" as const,
+    isManual: true,
+  }));
+
+  const issueItems = issues.map((issue) => {
+    const isGoodFirst = issue.labels.some((l) => {
+      const name = l.name.toLowerCase();
+      return (
+        name.includes("good first") ||
+        name.includes("beginner") ||
+        name.includes("easy") ||
+        name.includes("first-timers")
+      );
+    });
+    const isHard = issue.labels.some((l) => {
+      const name = l.name.toLowerCase();
+      return (
+        name.includes("hard") ||
+        name.includes("complex") ||
+        name.includes("architecture")
+      );
+    });
+    return {
+      id: `gh_${issue.number}`,
+      number: issue.number,
+      title: issue.title,
+      description: issue.body ? issue.body.slice(0, 180) + "..." : "Открытый тикет из GitHub Issues.",
+      difficulty: (isGoodFirst ? "easy" : isHard ? "hard" : "medium") as "easy" | "medium" | "hard",
+      tags: issue.labels.map((l) => l.name),
+      estimated_time: isGoodFirst ? "1-2 часа" : undefined,
+      source: "github" as const,
+      isManual: false,
+    };
+  });
+
+  const tasksList = [...manualItems, ...issueItems];
 
   const filteredTasks = tasksList.filter((t) => {
-    if (filterDifficulty === "all") return true;
-    return t.difficulty === filterDifficulty;
+    if (filterSource !== "all" && t.source !== filterSource) return false;
+    if (filterDifficulty !== "all" && t.difficulty !== filterDifficulty) return false;
+    return true;
   });
 
   // Team roles
@@ -181,7 +190,9 @@ export function ContributorFastTrack({
     const fd = new FormData();
     fd.set("projectId", project.id);
     fd.set("projectSlug", project.slug);
-    fd.set("issueNumber", String(selectedTaskForClaim.number));
+    fd.set("issueNumber", String(selectedTaskForClaim.number || 0));
+    fd.set("taskId", selectedTaskForClaim.id || "");
+    fd.set("source", selectedTaskForClaim.source || "github");
     fd.set("issueTitle", selectedTaskForClaim.title);
     fd.set("pitch", claimPitch);
 
@@ -361,55 +372,99 @@ export function ContributorFastTrack({
               </span>
             </div>
 
-            {/* Difficulty filter buttons */}
-            <div className="flex items-center bg-[#151821] p-0.5 rounded-lg border border-[#1d212b] text-xs">
-              <button
-                onClick={() => setFilterDifficulty("all")}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  filterDifficulty === "all"
-                    ? "bg-white/10 text-white font-medium"
-                    : "text-[#8a92a3] hover:text-white"
-                }`}
-              >
-                Все
-              </button>
-              <button
-                onClick={() => setFilterDifficulty("easy")}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  filterDifficulty === "easy"
-                    ? "bg-[#3fb950]/20 text-[#3fb950] font-medium"
-                    : "text-[#8a92a3] hover:text-white"
-                }`}
-              >
-                Легко
-              </button>
-              <button
-                onClick={() => setFilterDifficulty("medium")}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  filterDifficulty === "medium"
-                    ? "bg-[#d29922]/20 text-[#d29922] font-medium"
-                    : "text-[#8a92a3] hover:text-white"
-                }`}
-              >
-                Средне
-              </button>
-              <button
-                onClick={() => setFilterDifficulty("hard")}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  filterDifficulty === "hard"
-                    ? "bg-[#e5484d]/20 text-[#e5484d] font-medium"
-                    : "text-[#8a92a3] hover:text-white"
-                }`}
-              >
-                Сложно
-              </button>
+            {/* Filters: Source and Difficulty */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Source filter buttons */}
+              <div className="flex items-center bg-[#151821] p-0.5 rounded-lg border border-[#1d212b] text-xs">
+                <button
+                  onClick={() => setFilterSource("all")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterSource === "all"
+                      ? "bg-white/10 text-white font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Все ({tasksList.length})
+                </button>
+                <button
+                  onClick={() => setFilterSource("manual")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterSource === "manual"
+                      ? "bg-[#e5484d]/20 text-[#e5484d] font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Задачи проекта ({manualItems.length})
+                </button>
+                <button
+                  onClick={() => setFilterSource("github")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterSource === "github"
+                      ? "bg-[#38bdf8]/20 text-[#38bdf8] font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  GitHub Issues ({issueItems.length})
+                </button>
+              </div>
+
+              {/* Difficulty filter buttons */}
+              <div className="flex items-center bg-[#151821] p-0.5 rounded-lg border border-[#1d212b] text-xs">
+                <button
+                  onClick={() => setFilterDifficulty("all")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterDifficulty === "all"
+                      ? "bg-white/10 text-white font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Все сложности
+                </button>
+                <button
+                  onClick={() => setFilterDifficulty("easy")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterDifficulty === "easy"
+                      ? "bg-[#3fb950]/20 text-[#3fb950] font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Легко
+                </button>
+                <button
+                  onClick={() => setFilterDifficulty("medium")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterDifficulty === "medium"
+                      ? "bg-[#d29922]/20 text-[#d29922] font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Средне
+                </button>
+                <button
+                  onClick={() => setFilterDifficulty("hard")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterDifficulty === "hard"
+                      ? "bg-[#e5484d]/20 text-[#e5484d] font-medium"
+                      : "text-[#8a92a3] hover:text-white"
+                  }`}
+                >
+                  Сложно
+                </button>
+              </div>
             </div>
           </div>
 
           {filteredTasks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {filteredTasks.map((task) => {
-                const claim = claims.find((c) => c.issue_number === task.number && c.status !== "rejected");
+                const claim = claims.find((c) => {
+                  if (task.isManual) {
+                    if (task.id && c.task_id === task.id) return true;
+                    if (task.number && c.issue_number === task.number) return true;
+                    return false;
+                  }
+                  return c.issue_number === task.number && c.source !== "manual";
+                });
                 const isClaimedByMe =
                   Boolean(currentUserLogin && claim && claim.user_login.toLowerCase() === currentUserLogin.toLowerCase());
 
@@ -421,14 +476,19 @@ export function ContributorFastTrack({
 
                 return (
                   <div
-                    key={task.number}
+                    key={task.id || `${task.source}_${task.number}`}
                     className="rounded-xl border border-[#1d212b] bg-[#12151d] p-4 flex flex-col justify-between hover:border-[#2e3444] transition-all"
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${badge.color}`}>
-                          {badge.label}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${badge.color}`}>
+                            {badge.label}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-[#181d28] border border-white/5 text-[10px] font-mono text-[#8a92a3]">
+                            {task.isManual ? "Задача проекта" : "GitHub Issue"}
+                          </span>
+                        </div>
 
                         {/* Claim Status Badge */}
                         {claim ? (

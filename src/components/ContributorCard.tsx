@@ -1,8 +1,17 @@
 import Link from "next/link";
 import { Star, ExternalLink, MessageSquare, CircleDot } from "lucide-react";
 import { Project } from "@/lib/types";
+import { Locale } from "@/lib/i18n/types";
 
-export function ContributorCard({ project }: { project: Project }) {
+export function ContributorCard({
+  project,
+  locale = "ru",
+}: {
+  project: Project;
+  locale?: Locale;
+}) {
+  const isRu = locale !== "en";
+
   return (
     <div className="rounded-xl border border-[#1d212b] bg-[#0f1117] hover:border-[#2e3444] p-5 flex flex-col justify-between transition-all">
       <div>
@@ -44,7 +53,7 @@ export function ContributorCard({ project }: { project: Project }) {
             </div>
             {project.open_issues > 0 && (
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#3fb950]/10 border border-[#3fb950]/20 text-xs text-[#3fb950]">
-                <CircleDot className="w-3 h-3" />
+                <CircleDot className="w-3.5 h-3.5" />
                 <span className="font-mono">{project.open_issues}</span>
               </div>
             )}
@@ -62,7 +71,7 @@ export function ContributorCard({ project }: { project: Project }) {
         {/* Required Roles */}
         <div className="mb-3 space-y-1.5">
           <span className="text-[11px] font-medium text-[#8a92a3] block">
-            Требуемый стек и задачи:
+            {isRu ? "Требуемый стек и задачи:" : "Required stack & tasks:"}
           </span>
           <div className="flex flex-wrap gap-1.5">
             {project.contributor_roles.length > 0 ? (
@@ -75,14 +84,20 @@ export function ContributorCard({ project }: { project: Project }) {
                 </span>
               ))
             ) : (
-              <span className="text-xs text-[#8a92a3]">Любая помощь приветствуется</span>
+              <span className="text-xs text-[#8a92a3]">
+                {isRu ? "Любая помощь приветствуется" : "Any help is welcome"}
+              </span>
             )}
           </div>
         </div>
 
         {/* Task description */}
         <div className="mb-4 rounded-lg bg-[#151821] p-3 border border-[#1d212b] text-xs text-[#d1d5db] whitespace-pre-line leading-relaxed">
-          {project.contributor_tasks || project.description || "Помощь с разработкой, документацией или тестированием."}
+          {project.contributor_tasks ||
+            project.description ||
+            (isRu
+              ? "Помощь с разработкой, документацией или тестированием."
+              : "Help with development, documentation, or testing.")}
         </div>
       </div>
 
@@ -93,7 +108,9 @@ export function ContributorCard({ project }: { project: Project }) {
           className="inline-flex items-center gap-1.5 text-[#8a92a3] hover:text-white transition-colors"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          <span>Обсуждение ({project.comments_count || 0})</span>
+          <span>
+            {isRu ? "Обсуждение" : "Discussion"} ({project.comments_count || 0})
+          </span>
         </Link>
 
         <div className="flex items-center gap-2">

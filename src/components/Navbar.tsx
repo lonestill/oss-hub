@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { FolderGit2, Shield } from "lucide-react";
 import { getSession, isUserAdmin } from "@/lib/auth";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export async function Navbar() {
   const session = await getSession();
   const isAdmin = session ? await isUserAdmin(session.login) : false;
+  const { t } = await getServerTranslations();
 
   return (
     <header className="sticky top-0 z-50 bg-[#090a0f]/85 backdrop-blur-md border-b border-[#1d212b]">
@@ -17,10 +20,10 @@ export async function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="font-semibold text-sm text-white tracking-tight leading-none">
-                OSS Hub
+                {t.nav.brand}
               </span>
               <span className="text-[11px] text-[#8a92a3] leading-none mt-1">
-                Open Source Platform
+                {t.nav.openSourcePlatform}
               </span>
             </div>
           </Link>
@@ -31,36 +34,38 @@ export async function Navbar() {
               href="/guide"
               className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
             >
-              Руководство
+              {t.nav.guide}
             </Link>
             <Link
               href="/changelog"
               className="px-3 py-1.5 rounded-lg text-[#8a92a3] hover:text-white hover:bg-white/5 font-medium transition-colors"
             >
-              Changelog
+              {t.nav.changelog}
             </Link>
           </nav>
         </div>
 
-        {/* Right: GitHub Repo Link & User Profile */}
-        <div className="flex items-center gap-3">
+        {/* Right: Language Switcher, GitHub Repo Link & User Profile */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <LanguageSwitcher />
+
           <a
             href="https://github.com/lonestill/oss-hub"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#8a92a3] hover:text-white bg-[#151821] hover:bg-[#1f2432] border border-[#1d212b] hover:border-[#2e3444] transition-colors"
-            title="Исходный код OSS Hub на GitHub"
+            title={t.nav.githubTitle}
           >
             <FolderGit2 className="w-3.5 h-3.5 text-[#e5484d]" />
-            <span>GitHub</span>
+            <span>{t.nav.github}</span>
           </a>
 
           {session ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link
                 href={`/users/${session.login}`}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-[#1d212b] transition-colors"
-                title="Перейти в свой профиль"
+                className="flex items-center gap-2 px-2 py-1.5 sm:px-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-[#1d212b] transition-colors"
+                title={t.nav.profileTitle}
               >
                 {session.avatar_url && (
                   <img
@@ -69,7 +74,7 @@ export async function Navbar() {
                     className="w-6 h-6 rounded-full border border-white/10 object-cover"
                   />
                 )}
-                <span className="text-xs font-medium text-white">
+                <span className="text-xs font-medium text-white hidden sm:inline">
                   @{session.login}
                 </span>
               </Link>
@@ -79,23 +84,23 @@ export async function Navbar() {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#e5484d]/10 border border-[#e5484d]/30 text-[#e5484d] text-xs font-semibold hover:bg-[#e5484d]/20 transition-colors"
                 >
                   <Shield className="w-3 h-3" />
-                  <span>Админка</span>
+                  <span>{t.nav.admin}</span>
                 </Link>
               )}
               <a
                 href="/api/auth/logout"
                 className="text-xs text-[#8a92a3] hover:text-[#e5484d] transition-colors px-2 py-1.5"
-                title="Выйти"
+                title={t.nav.logout}
               >
-                Выйти
+                {t.nav.logout}
               </a>
             </div>
           ) : (
             <Link
               href="/login"
-              className="text-xs font-medium text-[#8a92a3] hover:text-white px-3 py-1.5 rounded-lg border border-[#1d212b] bg-[#0f1117] hover:border-[#2e3444] transition-colors"
+              className="text-xs font-medium text-[#8a92a3] hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#1d212b] bg-[#0f1117] hover:border-[#2e3444] transition-colors"
             >
-              Войти через GitHub
+              {t.nav.loginGithub}
             </Link>
           )}
         </div>

@@ -31,8 +31,14 @@ export function AdminProjectRow({ project }: { project: Project }) {
   const flags = project.moderation_flags || [];
 
   const handleStatusChange = (newStatus: "approved" | "pending" | "rejected") => {
+    let reason: string | undefined = undefined;
+    if (newStatus === "rejected") {
+      const input = prompt("Укажите причину отклонения проекта (спам, малварь, накрутка, фрод):");
+      if (input === null) return;
+      reason = input.trim();
+    }
     startTransition(async () => {
-      await adminUpdateStatusAction(project.id, newStatus);
+      await adminUpdateStatusAction(project.id, newStatus, reason);
     });
   };
 
@@ -213,6 +219,12 @@ export function AdminProjectRow({ project }: { project: Project }) {
             <span>Отчёт безопасности репозитория</span>
             <span className="font-mono text-[#8a92a3]">ID: {project.id}</span>
           </div>
+
+          {project.moderation_reason && (
+            <div className="p-3 rounded-lg bg-[#e5484d]/10 border border-[#e5484d]/30 text-[#e5484d] text-xs">
+              <span className="font-bold">Причина решения модератора:</span> {project.moderation_reason}
+            </div>
+          )}
 
           {flags.length === 0 ? (
             <div className="p-3 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/20 text-[#3fb950] text-xs flex items-center gap-2">

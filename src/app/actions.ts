@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { addOrUpdateProject, addComment, getProjectBySlug, updateProjectModerationStatus, deleteProject } from "@/lib/projects";
+import {
+  addOrUpdateProject,
+  addComment,
+  getProjectBySlug,
+  updateProjectModerationStatus,
+  deleteProject,
+  createAuditLog,
+  createProjectComplaint,
+  resolveProjectComplaint,
+} from "@/lib/projects";
 import { getSession, setSession, clearSession, isAdminAuthenticated, setAdminSession, isUserAdmin } from "@/lib/auth";
 import { client, initDb } from "@/lib/db";
 import { analyzeRepository } from "@/lib/moderation";
@@ -16,6 +25,7 @@ import {
   createTaskClaim,
   getClaimById,
   updateClaimStatus,
+  updateClaimInternalNotes,
   cancelTaskClaim,
   addTaskMessage,
   getTaskMessages,
@@ -23,6 +33,8 @@ import {
   updateTeamApplicationStatus,
 } from "@/lib/claims";
 import { upsertUserAvailability } from "@/lib/user-profile";
+import { fetchGitHubRepo } from "@/lib/github";
+import { ContributionMode, ContributorTask, TeamRoleItem } from "@/lib/types";
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
@@ -50,6 +62,9 @@ export async function submitProjectAction(prevState: { error?: string; success?:
     return { error: "Укажите ссылку на репозиторий GitHub." };
   }
 
+  const session = await getSession();
+  const isAdmin = session ? await isUserAdmin(session.login) : false;
+
   const roles = rolesRaw
     .split(",")
     .map((r) => r.trim())
@@ -63,6 +78,8 @@ export async function submitProjectAction(prevState: { error?: string; success?:
       contributorRoles: roles,
       contributorTasks: tasks,
       contactUrl: contact,
+      actorLogin: session?.login || null,
+      isAdmin,
     });
     slug = project.slug;
   } catch (err: unknown) {
@@ -184,10 +201,15 @@ export async function updateProjectOwnerAction(formData: FormData) {
     } catch {}
   }
 
+  const description = formData.has("description")
+    ? (formData.get("description") as string)?.trim() || null
+    : project.description;
+
   await client.execute({
     sql: `
       UPDATE projects
-      SET looking_for_contributors = ?,
+      SET description = ?,
+          looking_for_contributors = ?,
           contributor_roles = ?,
           contributor_tasks = ?,
           quickstart_command = ?,
@@ -200,6 +222,7 @@ export async function updateProjectOwnerAction(formData: FormData) {
       WHERE slug = ?
     `,
     args: [
+      description,
       looking ? 1 : 0,
       JSON.stringify(roles),
       tasks.trim() || null,
@@ -241,11 +264,23 @@ export async function adminLoginAction(formData: FormData) {
   redirect("/admin");
 }
 
-export async function adminUpdateStatusAction(projectId: string, status: "approved" | "pending" | "rejected") {
+export async function adminUpdateStatusAction(
+  projectId: string,
+  status: "approved" | "pending" | "rejected" | "hidden",
+  reason?: string
+) {
   const isAuth = await isAdminAuthenticated();
   if (!isAuth) throw new Error("Unauthorized");
   const session = await getSession();
-  await updateProjectModerationStatus(projectId, status, session?.login || "lonestill");
+  const actor = session?.login || "admin";
+  await updateProjectModerationStatus(projectId, status, actor, reason);
+  await createAuditLog({
+    actorLogin: actor,
+    action: `MODERATION_${status.toUpperCase()}`,
+    targetType: "project",
+    targetId: projectId,
+    details: reason ? `Причина: ${reason}` : `Статус изменен на ${status}`,
+  });
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/contributors");
@@ -254,7 +289,17 @@ export async function adminUpdateStatusAction(projectId: string, status: "approv
 export async function adminDeleteProjectAction(projectId: string) {
   const isAuth = await isAdminAuthenticated();
   if (!isAuth) throw new Error("Unauthorized");
+  const session = await getSession();
   await deleteProject(projectId);
+  if (session) {
+    await createAuditLog({
+      actorLogin: session.login,
+      action: "DELETE_PROJECT",
+      targetType: "project",
+      targetId: projectId,
+      details: "Проект полностью удален из платформы со всеми связанными данными",
+    });
+  }
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/contributors");
@@ -263,11 +308,38 @@ export async function adminDeleteProjectAction(projectId: string) {
 export async function adminRescanProjectAction(projectId: string, owner: string, repo: string) {
   const isAuth = await isAdminAuthenticated();
   if (!isAuth) throw new Error("Unauthorized");
+  const session = await getSession();
   const moderation = await analyzeRepository(owner, repo);
-  await client.execute({
-    sql: `UPDATE projects SET moderation_status = ?, moderation_score = ?, moderation_flags = ? WHERE id = ?`,
-    args: [moderation.status, moderation.score, JSON.stringify(moderation.flags), projectId],
+
+  // Check if manual decision was already made - do not overwrite manual decision!
+  const current = await client.execute({
+    sql: "SELECT moderation_reviewed_at, moderation_status FROM projects WHERE id = ? LIMIT 1",
+    args: [projectId],
   });
+  const hasManualDecision = current.rows.length > 0 && current.rows[0].moderation_reviewed_at;
+
+  if (hasManualDecision) {
+    await client.execute({
+      sql: `UPDATE projects SET moderation_score = ?, moderation_flags = ? WHERE id = ?`,
+      args: [moderation.score, JSON.stringify(moderation.flags), projectId],
+    });
+  } else {
+    await client.execute({
+      sql: `UPDATE projects SET moderation_status = ?, moderation_score = ?, moderation_flags = ? WHERE id = ?`,
+      args: [moderation.status, moderation.score, JSON.stringify(moderation.flags), projectId],
+    });
+  }
+
+  if (session) {
+    await createAuditLog({
+      actorLogin: session.login,
+      action: "RESCAN_PROJECT",
+      targetType: "project",
+      targetId: projectId,
+      details: `Пересканирован ${owner}/${repo}. Оценка: ${moderation.score}/100. Ручное решение сохранено.`,
+    });
+  }
+
   revalidatePath("/");
   revalidatePath("/admin");
 }
@@ -283,14 +355,27 @@ export async function deleteCommentAction(commentId: string, slug: string) {
   const isAuth = await isAdminAuthenticated();
 
   const project = await getProjectBySlug(slug);
+  if (!project) {
+    throw new Error("Проект не найден");
+  }
+
   const isOwner = Boolean(
-    project &&
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
 
   if (!isSuperAdmin && !isAuth && !isOwner) {
     throw new Error("Forbidden");
+  }
+
+  // Strict ownership check: comment MUST belong to this project!
+  const commentRow = await client.execute({
+    sql: "SELECT project_id FROM comments WHERE id = ? LIMIT 1",
+    args: [commentId],
+  });
+
+  if (commentRow.rows.length === 0 || String(commentRow.rows[0].project_id) !== project.id) {
+    throw new Error("Комментарий не принадлежит данному проекту");
   }
 
   await client.execute({
@@ -318,12 +403,33 @@ export async function claimTaskAction(
 
   const projectId = formData.get("projectId") as string;
   const projectSlug = formData.get("projectSlug") as string;
-  const issueNumber = Number(formData.get("issueNumber"));
-  const issueTitle = (formData.get("issueTitle") as string) || `Задача #${issueNumber}`;
+  const issueNumber = Number(formData.get("issueNumber")) || 0;
+  const taskId = (formData.get("taskId") as string) || null;
+  const source = (formData.get("source") as "github" | "manual") || (taskId ? "manual" : "github");
+  const issueTitle = (formData.get("issueTitle") as string) || `Задача #${issueNumber || taskId}`;
   const pitch = (formData.get("pitch") as string) || "";
 
-  if (!projectId || !projectSlug || !issueNumber || !pitch.trim()) {
+  if (!projectId || !projectSlug || (!issueNumber && !taskId) || !pitch.trim()) {
     return { error: "Опишите, как вы планируете решить задачу (стек, опыт или вопросы к автору)." };
+  }
+
+  await initDb();
+  // Anti-fraud: Deduplication check to prevent spamming identical claims
+  const existingClaim = await client.execute({
+    sql: `SELECT id FROM task_claims 
+          WHERE project_id = ? 
+            AND (
+              (? != 0 AND issue_number = ?)
+              OR
+              (? IS NOT NULL AND task_id = ?)
+            )
+            AND LOWER(user_login) = LOWER(?) 
+            AND status IN ('pending', 'assigned') 
+          LIMIT 1`,
+    args: [projectId, issueNumber, issueNumber, taskId, taskId || "", session.login],
+  });
+  if (existingClaim.rows.length > 0) {
+    return { error: "Вы уже отправили заявку на эту задачу. Дождитесь рассмотрения мейнтейнером." };
   }
 
   try {
@@ -332,6 +438,8 @@ export async function claimTaskAction(
       projectSlug,
       issueNumber,
       issueTitle,
+      taskId,
+      source,
       userLogin: session.login,
       userName: session.name || session.login,
       userAvatar: session.avatar_url,
@@ -350,39 +458,85 @@ export async function updateClaimStatusAction(
   claimId: string,
   slug: string,
   status: "pending" | "assigned" | "completed" | "rejected",
-  prUrl?: string
+  prUrl?: string | null,
+  internalNotes?: string | null
 ) {
   const session = await getSession();
   if (!session) {
     throw new Error("Unauthorized");
   }
 
-  const project = await getProjectBySlug(slug);
+  const currentClaim = await getClaimById(claimId);
+  if (!currentClaim) {
+    throw new Error("Claim not found");
+  }
+
+  // Strict project match check: prevent cross-project IDOR
+  if (currentClaim.project_slug !== slug) {
+    throw new Error("Claim project mismatch");
+  }
+
+  const project = await getProjectBySlug(currentClaim.project_slug);
+  if (!project) {
+    throw new Error("Project not found");
+  }
+
   const isOwner = Boolean(
-    project &&
+    project.owner_login &&
+    project.owner_login.toLowerCase() === session.login.toLowerCase()
+  );
+  const isSuperAdmin = await isUserAdmin(session.login);
+  const isClaimAuthor = currentClaim.user_login.toLowerCase() === session.login.toLowerCase();
+
+  // Author of claim can ONLY self-cancel (rejected) or submit PR (assigned with prUrl)
+  const isSelfCancel = isClaimAuthor && status === "rejected";
+  const isSelfPr = isClaimAuthor && status === "assigned" && Boolean(prUrl);
+
+  // Security check: only maintainer or superadmin can complete, unassign (pending), or assign, OR edit internalNotes!
+  if (!isOwner && !isSuperAdmin) {
+    if (!isSelfCancel && !isSelfPr) {
+      throw new Error("Forbidden: You cannot modify this claim status");
+    }
+    // Non-maintainer cannot pass or alter internalNotes
+    internalNotes = undefined;
+  }
+
+  // When status is pending (unassigned), guarantee pr_url is cleared in DB
+  const finalPrUrl = status === "pending" ? null : prUrl;
+
+  await updateClaimStatus(claimId, status, finalPrUrl, internalNotes);
+  revalidatePath(`/projects/${currentClaim.project_slug}`);
+  revalidatePath(`/projects/${currentClaim.project_slug}/crm`);
+  revalidatePath(`/users/${currentClaim.user_login}`);
+  return { success: true };
+}
+
+export async function updateClaimNotesAction(claimId: string, slug: string, notes: string) {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const claim = await getClaimById(claimId);
+  if (!claim) throw new Error("Claim not found");
+  if (claim.project_slug !== slug) throw new Error("Claim project mismatch");
+
+  const project = await getProjectBySlug(claim.project_slug);
+  if (!project) throw new Error("Project not found");
+
+  const isOwner = Boolean(
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
   const isSuperAdmin = await isUserAdmin(session.login);
 
-  // Check if current user is the author of this claim (can withdraw / reject their own claim or submit PR)
-  const currentClaim = await getClaimById(claimId);
-  const isClaimAuthor = Boolean(
-    currentClaim &&
-    currentClaim.user_login.toLowerCase() === session.login.toLowerCase()
-  );
-
-  // Author of the claim is allowed to submit a PR (assigned with prUrl) or cancel/reject their own claim
-  const isSelfCancel = isClaimAuthor && status === "rejected";
-  const isSelfPr = isClaimAuthor && status === "assigned" && Boolean(prUrl);
-
-  if (!isOwner && !isSuperAdmin && status !== "completed" && !isSelfCancel && !isSelfPr) {
-    throw new Error("Forbidden");
+  if (!isOwner && !isSuperAdmin) {
+    throw new Error("Forbidden: Only project maintainer can edit private notes");
   }
 
-  await updateClaimStatus(claimId, status, prUrl);
-  revalidatePath(`/projects/${slug}`);
-  revalidatePath(`/users/${session.login}`);
+  await updateClaimInternalNotes(claimId, notes);
+  revalidatePath(`/projects/${claim.project_slug}/crm`);
+  return { success: true };
 }
 
 export async function cancelClaimAction(claimId: string, slug: string) {
@@ -395,8 +549,11 @@ export async function cancelClaimAction(claimId: string, slug: string) {
   if (!claim) {
     throw new Error("Claim not found");
   }
+  if (claim.project_slug !== slug) {
+    throw new Error("Claim project mismatch");
+  }
 
-  const project = await getProjectBySlug(slug);
+  const project = await getProjectBySlug(claim.project_slug);
   const isOwner = Boolean(
     project &&
     project.owner_login &&
@@ -410,7 +567,8 @@ export async function cancelClaimAction(claimId: string, slug: string) {
   }
 
   await cancelTaskClaim(claimId);
-  revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${claim.project_slug}`);
+  revalidatePath(`/projects/${claim.project_slug}/crm`);
   revalidatePath(`/users/${session.login}`);
   return { success: true };
 }
@@ -426,19 +584,30 @@ export async function sendTaskMessageAction(
   }
 
   if (!content?.trim()) {
-    return;
+    return { error: "Пустое сообщение" };
   }
 
-  const project = await getProjectBySlug(slug);
+  const claim = await getClaimById(claimId);
+  if (!claim) throw new Error("Claim not found");
+  if (claim.project_slug !== slug) throw new Error("Claim project mismatch");
+
+  const project = await getProjectBySlug(claim.project_slug);
+  if (!project) throw new Error("Project not found");
+
   const isOwner = Boolean(
-    project &&
     project.owner_login &&
     project.owner_login.toLowerCase() === session.login.toLowerCase()
   );
+  const isClaimAuthor = claim.user_login.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+
+  if (!isOwner && !isClaimAuthor && !isSuperAdmin) {
+    throw new Error("Forbidden: You cannot access this private thread");
+  }
 
   await addTaskMessage({
     claimId,
-    projectId: project?.id || "",
+    projectId: project.id,
     senderLogin: session.login,
     senderName: session.name || session.login,
     senderAvatar: session.avatar_url,
@@ -446,7 +615,136 @@ export async function sendTaskMessageAction(
     content,
   });
 
+  revalidatePath(`/projects/${claim.project_slug}`);
+  revalidatePath(`/projects/${claim.project_slug}/crm`);
+  return { success: true };
+}
+
+export async function updateProjectGeneralAction(
+  slug: string,
+  data: { description: string; contactUrl: string; looking: boolean }
+) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  await initDb();
+  const project = await getProjectBySlug(slug);
+  if (!project) return { error: "Project not found" };
+
+  const isOwner = project.owner_login?.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isSuperAdmin) return { error: "Forbidden" };
+
+  await client.execute({
+    sql: `UPDATE projects SET description = ?, contact_url = ?, looking_for_contributors = ?, updated_at = ? WHERE slug = ?`,
+    args: [data.description.trim() || null, data.contactUrl.trim() || null, data.looking ? 1 : 0, Date.now(), slug],
+  });
+
   revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${slug}/crm`);
+  return { success: true };
+}
+
+export async function updateProjectContributionAction(
+  slug: string,
+  data: { modes: ContributionMode[]; quickstart: string; envExample: string }
+) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  await initDb();
+  const project = await getProjectBySlug(slug);
+  if (!project) return { error: "Project not found" };
+
+  const isOwner = project.owner_login?.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isSuperAdmin) return { error: "Forbidden" };
+
+  await client.execute({
+    sql: `UPDATE projects SET modes = ?, quickstart_command = ?, env_example = ?, updated_at = ? WHERE slug = ?`,
+    args: [JSON.stringify(data.modes), data.quickstart.trim() || null, data.envExample.trim() || null, Date.now(), slug],
+  });
+
+  revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${slug}/crm`);
+  return { success: true };
+}
+
+export async function updateProjectTasksAction(slug: string, tasks: ContributorTask[]) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  await initDb();
+  const project = await getProjectBySlug(slug);
+  if (!project) return { error: "Project not found" };
+
+  const isOwner = project.owner_login?.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isSuperAdmin) return { error: "Forbidden" };
+
+  await client.execute({
+    sql: `UPDATE projects SET contributor_tasks = ?, updated_at = ? WHERE slug = ?`,
+    args: [JSON.stringify(tasks), Date.now(), slug],
+  });
+
+  revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${slug}/crm`);
+  return { success: true };
+}
+
+export async function updateProjectRolesAction(slug: string, roles: TeamRoleItem[]) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  await initDb();
+  const project = await getProjectBySlug(slug);
+  if (!project) return { error: "Project not found" };
+
+  const isOwner = project.owner_login?.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isSuperAdmin) return { error: "Forbidden" };
+
+  const roleNames = roles.map((r) => r.role).filter(Boolean);
+
+  await client.execute({
+    sql: `UPDATE projects SET contributor_roles = ?, team_roles_data = ?, updated_at = ? WHERE slug = ?`,
+    args: [JSON.stringify(roleNames), JSON.stringify(roles), Date.now(), slug],
+  });
+
+  revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${slug}/crm`);
+  return { success: true };
+}
+
+export async function syncProjectWithGithubAction(slug: string) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  await initDb();
+  const project = await getProjectBySlug(slug);
+  if (!project) return { error: "Project not found" };
+
+  const isOwner = project.owner_login?.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isSuperAdmin) return { error: "Forbidden" };
+
+  const [owner, repo] = project.full_name.split("/");
+  if (!owner || !repo) return { error: "Invalid repository format" };
+
+  try {
+    const gh = await fetchGitHubRepo(owner, repo);
+    await client.execute({
+      sql: `UPDATE projects SET stars = ?, forks = ?, open_issues = ?, description = COALESCE(description, ?), readme = ?, updated_at = ? WHERE slug = ?`,
+      args: [gh.stargazers_count, gh.forks_count, gh.open_issues_count, gh.description || null, gh.readme_content || null, Date.now(), slug],
+    });
+
+    revalidatePath(`/projects/${slug}`);
+    revalidatePath(`/projects/${slug}/crm`);
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "GitHub API sync failed";
+    return { error: msg };
+  }
 }
 
 export async function applyToTeamAction(
@@ -518,10 +816,27 @@ export async function updateTeamApplicationStatusAction(
 
   await updateTeamApplicationStatus(appId, status);
   revalidatePath(`/projects/${slug}`);
+  revalidatePath(`/projects/${slug}/crm`);
   revalidatePath(`/users/${session.login}`);
+  return { success: true };
 }
 
 export async function getTaskMessagesAction(claimId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  const claim = await getClaimById(claimId);
+  if (!claim) return [];
+  const project = await getProjectBySlug(claim.project_slug);
+  const isOwner = Boolean(
+    project &&
+    project.owner_login &&
+    project.owner_login.toLowerCase() === session.login.toLowerCase()
+  );
+  const isClaimAuthor = claim.user_login.toLowerCase() === session.login.toLowerCase();
+  const isSuperAdmin = await isUserAdmin(session.login);
+  if (!isOwner && !isClaimAuthor && !isSuperAdmin) {
+    throw new Error("Forbidden");
+  }
   return await getTaskMessages(claimId);
 }
 
@@ -548,6 +863,61 @@ export async function updateUserAvailabilityAction(formData: FormData) {
 
   revalidatePath(`/users/${session.login}`);
   return { success: true };
+}
+
+export async function reportProjectAction(
+  prevState: { error?: string; success?: boolean } | null,
+  formData: FormData
+) {
+  const ip = await getClientIp();
+  const limit = commentActionLimiter.check(ip);
+  if (!limit.success) {
+    return { error: `Слишком частые действия. Подождите ${limit.retryAfter} сек.` };
+  }
+
+  const session = await getSession();
+  const reporterLogin = session?.login || `anon_${ip.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const projectId = formData.get("projectId") as string;
+  const projectSlug = formData.get("projectSlug") as string;
+  const reason = (formData.get("reason") as string) || "";
+
+  if (!projectId || !projectSlug || !reason.trim()) {
+    return { error: "Укажите причину жалобы." };
+  }
+
+  try {
+    await createProjectComplaint({
+      projectId,
+      projectSlug,
+      reporterLogin,
+      reason,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Не удалось отправить жалобу.";
+    return { error: msg };
+  }
+
+  return { success: true };
+}
+
+export async function adminResolveComplaintAction(
+  complaintId: string,
+  resolution: string,
+  status: "resolved" | "dismissed" = "resolved"
+) {
+  const isAuth = await isAdminAuthenticated();
+  if (!isAuth) throw new Error("Unauthorized");
+  const session = await getSession();
+  const resolver = session?.login || "admin";
+  await resolveProjectComplaint(complaintId, resolution, resolver, status);
+  await createAuditLog({
+    actorLogin: resolver,
+    action: `RESOLVE_COMPLAINT_${status.toUpperCase()}`,
+    targetType: "complaint",
+    targetId: complaintId,
+    details: resolution,
+  });
+  revalidatePath("/admin");
 }
 
 

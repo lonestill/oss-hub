@@ -1,5 +1,5 @@
 import { client, initDb } from "./db";
-import { Project, Comment } from "./types";
+import { Project, Comment, AuditLog, ProjectComplaint } from "./types";
 import { fetchGitHubRepo, parseGitHubUrl } from "./github";
 import { analyzeRepository } from "./moderation";
 import { parseSearchQuery } from "./search-query";
@@ -114,6 +114,8 @@ export function mapProjectRow(row: any): Project {
     moderation_flags: flags,
     moderation_reviewed_at: row.moderation_reviewed_at ? Number(row.moderation_reviewed_at) : null,
     moderation_reviewed_by: row.moderation_reviewed_by ? String(row.moderation_reviewed_by) : null,
+    moderation_reason: row.moderation_reason ? String(row.moderation_reason) : null,
+    is_deleted: Boolean(row.is_deleted),
     created_at: Number(row.created_at),
     updated_at: Number(row.updated_at),
     comments_count: Number(row.comments_count || 0),
@@ -308,6 +310,8 @@ export async function addOrUpdateProject(params: {
   contributorRoles?: string[];
   contributorTasks?: string;
   contactUrl?: string;
+  actorLogin?: string | null;
+  isAdmin?: boolean;
 }): Promise<Project> {
   await initDb();
 
@@ -322,12 +326,36 @@ export async function addOrUpdateProject(params: {
   const now = Date.now();
 
   const existing = await client.execute({
-    sql: `SELECT id, created_at FROM projects WHERE full_name = ? LIMIT 1`,
+    sql: `SELECT id, created_at, owner_login, moderation_status, moderation_reviewed_at, moderation_reviewed_by, moderation_reason FROM projects WHERE full_name = ? LIMIT 1`,
     args: [details.full_name],
   });
 
-  const id = existing.rows.length > 0 ? String(existing.rows[0].id) : `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const createdAt = existing.rows.length > 0 ? Number(existing.rows[0].created_at) : now;
+  const existingRow = existing.rows[0];
+  const isExisting = Boolean(existingRow);
+
+  if (isExisting) {
+    const existingOwner = String(existingRow.owner_login || "").toLowerCase();
+    const actor = (params.actorLogin || "").toLowerCase();
+    const canUpdate = params.isAdmin || (actor && (actor === existingOwner || actor === details.owner.login.toLowerCase()));
+
+    if (!canUpdate) {
+      throw new Error(
+        `Репозиторий ${details.full_name} уже добавлен в каталог. Обновлять параметры проекта может только его автор (@${existingRow.owner_login || details.owner.login}).`
+      );
+    }
+  }
+
+  const id = isExisting ? String(existingRow.id) : `proj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const createdAt = isExisting ? Number(existingRow.created_at) : now;
+
+  // Preserve manual moderation decision if already reviewed!
+  const hasManualDecision = isExisting && existingRow.moderation_reviewed_at;
+  const finalModerationStatus = hasManualDecision
+    ? String(existingRow.moderation_status)
+    : moderation.status;
+  const finalReviewedAt = hasManualDecision ? Number(existingRow.moderation_reviewed_at) : null;
+  const finalReviewedBy = hasManualDecision ? String(existingRow.moderation_reviewed_by) : null;
+  const finalReason = hasManualDecision && existingRow.moderation_reason ? String(existingRow.moderation_reason) : null;
 
   await client.execute({
     sql: `
@@ -337,9 +365,10 @@ export async function addOrUpdateProject(params: {
         owner_avatar, owner_login, looking_for_contributors,
         contributor_roles, contributor_tasks, contact_url,
         moderation_status, moderation_score, moderation_flags,
+        moderation_reviewed_at, moderation_reviewed_by, moderation_reason,
         created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(full_name) DO UPDATE SET
         name = excluded.name,
         slug = excluded.slug,
@@ -361,6 +390,9 @@ export async function addOrUpdateProject(params: {
         moderation_status = excluded.moderation_status,
         moderation_score = excluded.moderation_score,
         moderation_flags = excluded.moderation_flags,
+        moderation_reviewed_at = excluded.moderation_reviewed_at,
+        moderation_reviewed_by = excluded.moderation_reviewed_by,
+        moderation_reason = excluded.moderation_reason,
         updated_at = excluded.updated_at
     `,
     args: [
@@ -383,9 +415,12 @@ export async function addOrUpdateProject(params: {
       JSON.stringify(params.contributorRoles || []),
       params.contributorTasks?.trim() || null,
       params.contactUrl?.trim() || null,
-      moderation.status,
+      finalModerationStatus,
       moderation.score,
       JSON.stringify(moderation.flags),
+      finalReviewedAt,
+      finalReviewedBy,
+      finalReason,
       createdAt,
       now,
     ],
@@ -410,13 +445,14 @@ export async function getProjectsByOwner(ownerLogin: string): Promise<Project[]>
 
 export async function updateProjectModerationStatus(
   id: string,
-  status: "approved" | "pending" | "rejected",
-  reviewer: string
+  status: "approved" | "pending" | "rejected" | "hidden",
+  reviewer: string,
+  reason?: string
 ) {
   await initDb();
   await client.execute({
-    sql: `UPDATE projects SET moderation_status = ?, moderation_reviewed_at = ?, moderation_reviewed_by = ? WHERE id = ?`,
-    args: [status, Date.now(), reviewer, id],
+    sql: `UPDATE projects SET moderation_status = ?, moderation_reviewed_at = ?, moderation_reviewed_by = ?, moderation_reason = ? WHERE id = ?`,
+    args: [status, Date.now(), reviewer, reason?.trim() || null, id],
   });
 }
 
@@ -427,8 +463,104 @@ export async function deleteProject(id: string) {
     args: [id],
   });
   await client.execute({
+    sql: `DELETE FROM task_messages WHERE project_id = ?`,
+    args: [id],
+  });
+  await client.execute({
+    sql: `DELETE FROM task_claims WHERE project_id = ?`,
+    args: [id],
+  });
+  await client.execute({
+    sql: `DELETE FROM team_applications WHERE project_id = ?`,
+    args: [id],
+  });
+  await client.execute({
+    sql: `DELETE FROM project_complaints WHERE project_id = ?`,
+    args: [id],
+  });
+  await client.execute({
     sql: `DELETE FROM projects WHERE id = ?`,
     args: [id],
+  });
+}
+
+export async function createAuditLog(params: {
+  actorLogin: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  details?: string;
+}) {
+  await initDb();
+  const id = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  await client.execute({
+    sql: `INSERT INTO audit_logs (id, actor_login, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, params.actorLogin, params.action, params.targetType, params.targetId, params.details || null, Date.now()],
+  });
+}
+
+export async function getAuditLogs(limit = 50): Promise<AuditLog[]> {
+  await initDb();
+  const result = await client.execute({
+    sql: `SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT ?`,
+    args: [limit],
+  });
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    actor_login: String(row.actor_login),
+    action: String(row.action),
+    target_type: String(row.target_type),
+    target_id: String(row.target_id),
+    details: row.details ? String(row.details) : null,
+    created_at: Number(row.created_at),
+  }));
+}
+
+export async function createProjectComplaint(params: {
+  projectId: string;
+  projectSlug: string;
+  reporterLogin: string;
+  reason: string;
+}): Promise<void> {
+  await initDb();
+  const id = `complaint_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  await client.execute({
+    sql: `INSERT INTO project_complaints (id, project_id, project_slug, reporter_login, reason, status, created_at) VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+    args: [id, params.projectId, params.projectSlug, params.reporterLogin, params.reason.trim(), Date.now()],
+  });
+}
+
+export async function getProjectComplaints(status?: string): Promise<ProjectComplaint[]> {
+  await initDb();
+  const sql = status
+    ? `SELECT * FROM project_complaints WHERE status = ? ORDER BY created_at DESC`
+    : `SELECT * FROM project_complaints ORDER BY created_at DESC`;
+  const args = status ? [status] : [];
+  const result = await client.execute({ sql, args });
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    project_id: String(row.project_id),
+    project_slug: String(row.project_slug),
+    reporter_login: String(row.reporter_login),
+    reason: String(row.reason),
+    status: (row.status as "pending" | "resolved" | "dismissed") || "pending",
+    resolution: row.resolution ? String(row.resolution) : null,
+    resolved_by: row.resolved_by ? String(row.resolved_by) : null,
+    created_at: Number(row.created_at),
+    resolved_at: row.resolved_at ? Number(row.resolved_at) : null,
+  }));
+}
+
+export async function resolveProjectComplaint(
+  id: string,
+  resolution: string,
+  resolverLogin: string,
+  status: "resolved" | "dismissed" = "resolved"
+): Promise<void> {
+  await initDb();
+  await client.execute({
+    sql: `UPDATE project_complaints SET status = ?, resolution = ?, resolved_by = ?, resolved_at = ? WHERE id = ?`,
+    args: [status, resolution.trim(), resolverLogin, Date.now(), id],
   });
 }
 

@@ -15,10 +15,11 @@ export interface ModerationResult {
     suspiciousFiles: string[];
     authorAgeDays?: number;
     rootFilesCount: number;
+    scanComplete: boolean;
   };
 }
 
-const SUSPICIOUS_EXTENSIONS = /\.(exe|scr|bat|cmd|vbs|ps1|dll|bin|iso|msi|pif|lnk|hta|cpl)$/i;
+const SUSPICIOUS_EXTENSIONS = /\.(exe|scr|bat|cmd|vbs|bin|iso|msi|pif|lnk|hta|cpl)$/i;
 const ARCHIVE_EXTENSIONS = /\.(zip|rar|7z|tar|gz|bz2)$/i;
 
 export async function analyzeRepository(owner: string, repo: string): Promise<ModerationResult> {
@@ -41,6 +42,8 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
   const suspiciousFiles: string[] = [];
   let authorAgeDays: number | undefined;
   let rootFilesCount = 0;
+  let successfulChecks = 0;
+  let failedChecks = 0;
 
   // 1. Check Root Directory Contents
   try {
@@ -50,13 +53,13 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
     });
 
     if (contentsRes.ok) {
+      successfulChecks++;
       const items = await contentsRes.json();
       if (Array.isArray(items)) {
         rootFilesCount = items.length;
 
         for (const item of items) {
           const name = item.name.toLowerCase();
-
           if (SUSPICIOUS_EXTENSIONS.test(name)) {
             suspiciousFiles.push(item.name);
           } else if (ARCHIVE_EXTENSIONS.test(name)) {
@@ -68,39 +71,44 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
           flags.push({
             level: "danger",
             code: "SUSPICIOUS_ROOT_FILES",
-            message: `В корне обнаружены подозрительные бинарные файлы/архивы: ${suspiciousFiles.join(", ")}`,
+            message: `В корне репозитория обнаружены подозрительные бинарные файлы: ${suspiciousFiles.join(", ")}`,
           });
-          score -= 45;
+          score -= 40;
         }
 
-        if (rootFilesCount <= 2) {
+        if (rootFilesCount <= 1) {
           flags.push({
             level: "warning",
             code: "MINIMAL_FILES",
-            message: `В репозитории подозрительно мало файлов (${rootFilesCount}). Возможна заглушка или дроппер.`,
+            message: `В репозитории минимальное количество файлов (${rootFilesCount}). Возможно, пустая заглушка.`,
           });
           score -= 15;
         }
       }
     } else if (contentsRes.status === 404) {
+      successfulChecks++;
       flags.push({
         level: "danger",
         code: "EMPTY_REPOSITORY",
-        message: "Репозиторий пуст или не содержит файлов в основной ветке. Возможен фейк.",
+        message: "Репозиторий пуст или не содержит файлов в ветке по умолчанию.",
       });
       score -= 50;
+    } else {
+      failedChecks++;
     }
   } catch (err) {
     console.warn("Failed to check repo contents:", err);
+    failedChecks++;
   }
 
-  // 1.1 Check XSS and Malicious scripts in repo metadata
+  // 2. Check XSS and Malicious scripts in repo metadata
   try {
     const repoMetaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers,
       next: { revalidate: 60 },
     });
     if (repoMetaRes.ok) {
+      successfulChecks++;
       const repoData = await repoMetaRes.json();
       const desc = (repoData.description || "").toLowerCase();
       const hp = (repoData.homepage || "").toLowerCase();
@@ -114,16 +122,19 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
         flags.push({
           level: "danger",
           code: "XSS_METADATA_INJECTION",
-          message: "В описании или homepage репозитория обнаружен явный XSS-пейлоад (javascript: URI или тег скрипта).",
+          message: "В описании или homepage репозитория обнаружен XSS-пейлоад (javascript: URI или тег скрипта).",
         });
         score -= 60;
       }
+    } else {
+      failedChecks++;
     }
   } catch (err) {
     console.warn("Failed to check repo metadata for XSS:", err);
+    failedChecks++;
   }
 
-  // 2. Check GitHub Actions Workflows
+  // 3. Check GitHub Actions Workflows
   try {
     const wfRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/.github/workflows`, {
       headers,
@@ -137,7 +148,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
     hasWorkflows = false;
   }
 
-  // 3. Check Releases (Manual vs GitHub Actions)
+  // 4. Check Releases
   try {
     const relRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`, {
       headers,
@@ -145,6 +156,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
     });
 
     if (relRes.ok) {
+      successfulChecks++;
       const releases = await relRes.json();
       if (Array.isArray(releases) && releases.length > 0) {
         let manualWithBinaries = 0;
@@ -169,26 +181,22 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
 
         if (manualWithBinaries > 0) {
           flags.push({
-            level: "danger",
-            code: "MANUAL_BINARY_RELEASES",
-            message: `${manualWithBinaries} релиз(ов) с бинарными файлами загружены вручную аккаунтом пользователя, а не через проверенный CI/CD (GitHub Actions). Повышенный риск вредоносных билдов.`,
-          });
-          score -= 40;
-        } else if (manualReleasesCount > 0 && !hasWorkflows) {
-          flags.push({
             level: "warning",
-            code: "MANUAL_RELEASES_NO_CI",
-            message: "Релизы создаются вручную без использования GitHub Actions workflows.",
+            code: "MANUAL_BINARY_RELEASES",
+            message: `${manualWithBinaries} релиз(ов) содержат вложения, опубликованные вручную. Рекомендуется ручная проверка бинарников.`,
           });
           score -= 20;
         }
       }
+    } else {
+      failedChecks++;
     }
   } catch (err) {
     console.warn("Failed to check repo releases:", err);
+    failedChecks++;
   }
 
-  // 4. Check Author Profile Age
+  // 5. Check Author Profile Age
   try {
     const userRes = await fetch(`https://api.github.com/users/${owner}`, {
       headers,
@@ -196,6 +204,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
     });
 
     if (userRes.ok) {
+      successfulChecks++;
       const userData = await userRes.json();
       if (userData.created_at) {
         const createdMs = new Date(userData.created_at).getTime();
@@ -206,7 +215,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
           flags.push({
             level: "danger",
             code: "NEW_ACCOUNT_DANGER",
-            message: `Аккаунт автора создан всего ${authorAgeDays} дн. назад (< 14 дней). Высокий риск фейка или одноразового профиля.`,
+            message: `Аккаунт автора создан всего ${authorAgeDays} дн. назад (< 14 дней). Высокий риск одноразового профиля.`,
           });
           score -= 35;
         } else if (authorAgeDays < 60) {
@@ -218,12 +227,33 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
           score -= 15;
         }
       }
+    } else {
+      failedChecks++;
     }
   } catch (err) {
     console.warn("Failed to check user info:", err);
+    failedChecks++;
   }
 
-  // Final score clamping
+  // Scan completeness evaluation
+  const scanComplete = failedChecks === 0;
+
+  if (successfulChecks === 0 && failedChecks > 0) {
+    flags.push({
+      level: "danger",
+      code: "SCAN_UNVERIFIED",
+      message: "GitHub API вернул ошибку (503/403/сбой сети). Автоматическая проверка не выполнена, проект отправлен на ручную модерацию.",
+    });
+    score = 50;
+  } else if (failedChecks > 0) {
+    flags.push({
+      level: "warning",
+      code: "SCAN_PARTIAL",
+      message: "Часть проверок GitHub API не ответила. Результаты сканирования предварительные.",
+    });
+    score = Math.min(score, 75);
+  }
+
   score = Math.max(0, Math.min(100, score));
 
   // Determine Moderation Status
@@ -231,7 +261,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
   const hasDanger = flags.some((f) => f.level === "danger");
   const warningsCount = flags.filter((f) => f.level === "warning").length;
 
-  if (hasDanger || score < 60 || warningsCount >= 2) {
+  if (hasDanger || score < 60 || warningsCount >= 2 || !scanComplete && successfulChecks === 0) {
     status = "pending";
   }
 
@@ -246,6 +276,7 @@ export async function analyzeRepository(owner: string, repo: string): Promise<Mo
       suspiciousFiles,
       authorAgeDays,
       rootFilesCount,
+      scanComplete,
     },
   };
 }

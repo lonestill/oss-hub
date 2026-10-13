@@ -6,7 +6,7 @@ import { Star, GitFork, AlertCircle, ExternalLink, Globe, LayoutDashboard } from
 import Link from "next/link";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { CommentsSection } from "@/components/CommentsSection";
-import { OwnerControlPanel } from "@/components/OwnerControlPanel";
+import { ReportProjectModal } from "@/components/ReportProjectModal";
 import { ProjectIssuesList } from "@/components/ProjectIssuesList";
 import { ProjectDocsTabs } from "@/components/ProjectDocsTabs";
 import { ContributorFastTrack } from "@/components/ContributorFastTrack";
@@ -53,6 +53,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     isOwner || isAdmin ? getTeamApplicationsByProject(project.id) : Promise.resolve([]),
     owner && repo ? fetchGitHubReleases(owner, repo) : Promise.resolve([]),
   ]);
+
+  const attentionCount =
+    claims.filter((c) => c.status === "pending").length +
+    teamApplications.filter((a) => a.status === "pending").length +
+    claims.filter((c) => c.status === "assigned" && Boolean(c.pr_url)).length;
 
   return (
     <div className="space-y-6">
@@ -132,20 +137,18 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </div>
 
           {/* External Links & CRM Shortcut */}
+          {/* External Links, Maintainer Entry & Report */}
           <div className="flex items-center gap-2 text-xs flex-wrap">
             {isOwner && (
               <Link
                 href={`/projects/${project.slug}/crm`}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#e5484d]/15 hover:bg-[#e5484d]/25 text-[#e5484d] hover:text-white border border-[#e5484d]/30 font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#e5484d] hover:bg-[#f2555a] text-white font-semibold transition-all shadow-sm shadow-[#e5484d]/25 active:scale-95"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>CRM репозитория ↗</span>
-                {claims.filter((c) => c.status === "pending").length +
-                  teamApplications.filter((a) => a.status === "pending").length >
-                  0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#e5484d] text-white text-[10px] font-bold font-mono">
-                    {claims.filter((c) => c.status === "pending").length +
-                      teamApplications.filter((a) => a.status === "pending").length}
+                <span>Управлять проектом</span>
+                {attentionCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-black/40 text-white text-[10px] font-bold font-mono border border-white/20">
+                    {attentionCount}
                   </span>
                 )}
               </Link>
@@ -170,6 +173,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               <ExternalLink className="w-3.5 h-3.5" />
               <span>GitHub</span>
             </a>
+            <ReportProjectModal projectId={project.id} projectSlug={project.slug} />
           </div>
         </div>
 
@@ -211,15 +215,6 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
-
-      {/* Owner Control Panel if logged in as repo owner */}
-      {isOwner && (
-        <OwnerControlPanel
-          project={project}
-          claims={claims}
-          teamApplications={teamApplications}
-        />
-      )}
 
       {/* Maintainer Verification Prompt if guest */}
       {!session && project.owner_login && (

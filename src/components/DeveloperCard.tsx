@@ -1,34 +1,40 @@
 import Link from "next/link";
 import {
-  Star,
   ExternalLink,
   Send,
-  FolderGit2,
-  Sparkles,
   Clock,
   ArrowRight,
 } from "lucide-react";
 import { DeveloperProfile } from "@/lib/user-profile";
+import { Locale } from "@/lib/i18n/types";
 
-export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
+export function DeveloperCard({
+  dev,
+  locale = "ru",
+}: {
+  dev: DeveloperProfile;
+  locale?: Locale;
+}) {
+  const isRu = locale !== "en";
+
   const statusConfig = {
     open: {
-      label: "Открыт к проектам",
+      label: isRu ? "Открыт к проектам" : "Open to projects",
       dot: "bg-[#3fb950]",
       badge: "bg-[#3fb950]/10 text-[#3fb950] border-[#3fb950]/30",
     },
     mentor: {
-      label: "Помогает новичкам",
+      label: isRu ? "Помогает новичкам" : "Mentoring newcomers",
       dot: "bg-[#38bdf8]",
       badge: "bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/30",
     },
     maintainer: {
-      label: "Мейнтейнер",
+      label: isRu ? "Мейнтейнер" : "Maintainer",
       dot: "bg-[#e5484d]",
       badge: "bg-[#e5484d]/10 text-[#e5484d] border-[#e5484d]/30",
     },
     busy: {
-      label: "Занят",
+      label: isRu ? "Занят" : "Busy",
       dot: "bg-[#d29922]",
       badge: "bg-[#d29922]/10 text-[#d29922] border-[#d29922]/30",
     },
@@ -86,7 +92,10 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
         {dev.hours_per_week && (
           <div className="flex items-center gap-1.5 text-[11px] text-[#8a92a3]">
             <Clock className="w-3 h-3 text-[#586071]" />
-            <span>Готовность: <span className="text-white font-mono">{dev.hours_per_week}</span></span>
+            <span>
+              {isRu ? "Готовность: " : "Availability: "}
+              <span className="text-white font-mono">{dev.hours_per_week}</span>
+            </span>
           </div>
         )}
 
@@ -94,7 +103,7 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
         {dev.preferred_stack.length > 0 && (
           <div className="space-y-1.5 pt-1">
             <span className="text-[10px] text-[#586071] font-mono uppercase tracking-wider block">
-              Стек технологий:
+              {isRu ? "Стек технологий:" : "Tech stack:"}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {dev.preferred_stack.slice(0, 5).map((tech) => (
@@ -120,15 +129,21 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
         {/* Quick Numbers */}
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           <div className="p-1.5 rounded-lg bg-[#141722] border border-[#1d212b]">
-            <span className="text-[10px] text-[#8a92a3] block">Проекты</span>
+            <span className="text-[10px] text-[#8a92a3] block">
+              {isRu ? "Проекты" : "Projects"}
+            </span>
             <span className="font-bold text-white font-mono">{dev.projects_count}</span>
           </div>
           <div className="p-1.5 rounded-lg bg-[#141722] border border-[#1d212b]">
-            <span className="text-[10px] text-[#8a92a3] block">Задачи</span>
+            <span className="text-[10px] text-[#8a92a3] block">
+              {isRu ? "Задачи" : "Tasks"}
+            </span>
             <span className="font-bold text-[#e5484d] font-mono">{dev.claims_count}</span>
           </div>
           <div className="p-1.5 rounded-lg bg-[#141722] border border-[#1d212b]">
-            <span className="text-[10px] text-[#8a92a3] block">Звёзды</span>
+            <span className="text-[10px] text-[#8a92a3] block">
+              {isRu ? "Звёзды" : "Stars"}
+            </span>
             <span className="font-bold text-white font-mono">{dev.stars_count}</span>
           </div>
         </div>
@@ -139,7 +154,7 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
             href={`/users/${dev.login}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-white border border-[#2e3444] font-semibold transition-colors"
           >
-            <span>В профиль</span>
+            <span>{isRu ? "В профиль" : "View profile"}</span>
             <ArrowRight className="w-3 h-3 text-[#e5484d]" />
           </Link>
 
@@ -153,7 +168,7 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-[#38bdf8] border border-[#2e3444] transition-colors"
-              title="Написать в Telegram"
+              title={isRu ? "Написать в Telegram" : "Message on Telegram"}
             >
               <Send className="w-3.5 h-3.5" />
             </a>
@@ -164,7 +179,7 @@ export function DeveloperCard({ dev }: { dev: DeveloperProfile }) {
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-lg bg-[#161a23] hover:bg-[#1f2432] text-[#8a92a3] hover:text-white border border-[#1d212b] transition-colors"
-            title="GitHub профиль"
+            title={isRu ? "GitHub профиль" : "GitHub profile"}
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>

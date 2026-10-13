@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "bun run scripts/test-e2e.ts",
+    "seed:demo": "bun run scripts/seed-demo-data.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

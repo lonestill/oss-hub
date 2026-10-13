@@ -4,6 +4,7 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { ContributorCard } from "@/components/ContributorCard";
 import { DeveloperCard } from "@/components/DeveloperCard";
 import { SearchFilters } from "@/components/SearchFilters";
+import { getServerTranslations } from "@/lib/i18n/server";
 import {
   Plus,
   FolderGit2,
@@ -92,6 +93,8 @@ export default async function HomePage({ searchParams }: PageProps) {
   const roleFilter = params.role || "";
   const statusFilter = params.status || "";
 
+  const { t, locale } = await getServerTranslations();
+
   // Resolve current active tab
   let currentTab: "projects" | "looking" | "devs" = "projects";
   if (params.tab === "looking" || params.tab === "devs") {
@@ -117,7 +120,6 @@ export default async function HomePage({ searchParams }: PageProps) {
   const totalProjects = allProjects.length;
   const lookingProjects = allProjects.filter((p) => p.looking_for_contributors);
   const lookingCount = lookingProjects.length;
-  const totalStars = allProjects.reduce((acc, p) => acc + p.stars, 0);
 
   const filteredLookingProjects = roleFilter
     ? lookingProjects.filter((p) =>
@@ -141,15 +143,15 @@ export default async function HomePage({ searchParams }: PageProps) {
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-xs font-medium text-[#8a92a3]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
-              <span>Каталог открытых разработок и разработчиков</span>
+              <span>{t.home.mastheadBadge}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
-              Находите открытые проекты и единомышленников
+              {t.home.mastheadTitle}
             </h1>
 
             <p className="text-sm text-[#8a92a3] leading-relaxed max-w-xl">
-              Платформа для авторов и контрибьюторов. Публикуйте свои репозитории, находите разработчиков в команду и обсуждайте задачи от первого лица.
+              {t.home.mastheadDesc}
             </p>
           </div>
 
@@ -163,7 +165,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   : "border-[#1d212b] bg-[#12151d] hover:border-[#2e3444]"
               }`}
             >
-              <div className="text-[11px] font-medium text-[#8a92a3]">Проектов</div>
+              <div className="text-[11px] font-medium text-[#8a92a3]">{t.home.metricsProjects}</div>
               <div className="text-xl font-bold text-white mt-0.5 font-mono">
                 {totalProjects}
               </div>
@@ -177,7 +179,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   : "border-[#1d212b] bg-[#12151d] hover:border-[#2e3444]"
               }`}
             >
-              <div className="text-[11px] font-medium text-[#8a92a3]">Ищут команду</div>
+              <div className="text-[11px] font-medium text-[#8a92a3]">{t.home.metricsLooking}</div>
               <div className="text-xl font-bold text-[#e5484d] mt-0.5 font-mono">
                 {lookingCount}
               </div>
@@ -191,7 +193,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   : "border-[#1d212b] bg-[#12151d] hover:border-[#2e3444]"
               }`}
             >
-              <div className="text-[11px] font-medium text-[#8a92a3]">Разработчиков</div>
+              <div className="text-[11px] font-medium text-[#8a92a3]">{t.home.metricsDevs}</div>
               <div className="text-xl font-bold text-[#3fb950] mt-0.5 font-mono">
                 {devs.length}
               </div>
@@ -206,7 +208,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           <div className="space-y-1.5 max-w-2xl">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#e5484d]/20 text-[#e5484d] border border-[#e5484d]/30 uppercase tracking-wider">
-                Исходный код открыт
+                {t.home.bannerBadge}
               </span>
               <span className="text-xs text-[#8a92a3]">·</span>
               <span className="text-xs font-mono text-white font-semibold">
@@ -214,10 +216,10 @@ export default async function HomePage({ searchParams }: PageProps) {
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-              OSS Hub разрабатывается сообществом на GitHub
+              {t.home.bannerTitle}
             </h2>
             <p className="text-xs text-[#8a92a3] leading-relaxed">
-              Мы сами используем свои инструменты: берите открытые задачи в воркспейсе платформы, предлагайте фичи в PR и развивайте платформу вместе с нами.
+              {t.home.bannerDesc}
             </p>
           </div>
 
@@ -226,7 +228,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               href="/projects/lonestill-oss-hub"
               className="px-4 py-2 rounded-xl bg-[#e5484d] hover:bg-[#d63d42] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-md shadow-[#e5484d]/20"
             >
-              <span>Задачи проекта</span>
+              <span>{t.home.bannerTasksBtn}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <a
@@ -254,7 +256,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             }`}
           >
             <FolderGit2 className="w-3.5 h-3.5 text-[#38bdf8]" />
-            <span>Проекты ({totalProjects})</span>
+            <span>{t.home.tabProjects} ({totalProjects})</span>
           </Link>
 
           <Link
@@ -266,7 +268,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             }`}
           >
             <Code2 className="w-3.5 h-3.5 text-[#e5484d]" />
-            <span>Ищут разработчиков ({lookingCount})</span>
+            <span>{t.home.tabLooking} ({lookingCount})</span>
           </Link>
 
           <Link
@@ -278,7 +280,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             }`}
           >
             <Users className="w-3.5 h-3.5 text-[#3fb950]" />
-            <span>Разработчики ({devs.length})</span>
+            <span>{t.home.tabDevs} ({devs.length})</span>
           </Link>
         </div>
 
@@ -287,7 +289,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             href="/profile"
             className="inline-flex items-center gap-1.5 text-xs text-[#8a92a3] hover:text-white transition-colors"
           >
-            <span>Настроить свой статус доступности</span>
+            <span>{t.home.setupAvailability}</span>
             <ArrowRight className="w-3 h-3 text-[#e5484d]" />
           </Link>
         ) : (
@@ -295,7 +297,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             href="/submit"
             className="inline-flex items-center gap-1.5 text-xs text-[#8a92a3] hover:text-white transition-colors"
           >
-            <span>Добавить свой репозиторий</span>
+            <span>{t.home.addRepo}</span>
             <ArrowRight className="w-3 h-3 text-[#e5484d]" />
           </Link>
         )}
@@ -317,7 +319,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           {allProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {allProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} locale={locale} />
               ))}
             </div>
           ) : isHackerPayload(search) ? (
@@ -331,15 +333,15 @@ export default async function HomePage({ searchParams }: PageProps) {
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e5484d]/15 border border-[#e5484d]/30 text-[11px] font-mono text-[#e5484d] font-semibold">
                   <Terminal className="w-3 h-3" />
-                  <span>SECURITY NOTICE</span>
+                  <span>{t.home.hackerBadge}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                  Пейлоад обнаружен!
+                  {t.home.hackerTitle}
                 </h2>
               </div>
 
               <p className="text-sm text-[#cbd5e1] max-w-lg mx-auto leading-relaxed">
-                SQLi и XSS здесь закрыты параметризованными запросами Turso и DOMPurify. Но за попытку респект! Напиши{" "}
+                {t.home.hackerDesc1}
                 <a
                   href="https://t.me/lonestill"
                   target="_blank"
@@ -348,7 +350,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                 >
                   @lonestill
                 </a>
-                , если хочешь обсудить баунти.
+                {t.home.hackerDesc2}
               </p>
 
               <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -358,13 +360,13 @@ export default async function HomePage({ searchParams }: PageProps) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#e5484d] hover:bg-[#d63b40] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
                 >
-                  <span>Написать в Telegram</span>
+                  <span>{t.home.writeTelegram}</span>
                 </a>
                 <Link
                   href="/"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#1a1e28] hover:bg-[#252a38] text-[#8a92a3] hover:text-white font-medium text-xs rounded-lg border border-[#2b3142] transition-colors"
                 >
-                  <span>Сбросить поиск</span>
+                  <span>{t.home.resetSearch}</span>
                 </Link>
               </div>
             </div>
@@ -374,12 +376,12 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <FolderGit2 className="w-5 h-5" />
               </div>
               <div className="text-sm font-semibold text-white">
-                Репозитории не найдены
+                {t.home.noProjectsTitle}
               </div>
               <p className="text-xs text-[#8a92a3] max-w-sm mx-auto">
                 {search || language
-                  ? "По заданным фильтрам ничего не найдено. Попробуйте сбросить параметры поиска."
-                  : "В каталоге пока нет проектов. Добавьте первый репозиторий через свой GitHub профиль."}
+                  ? t.home.noProjectsDescFiltered
+                  : t.home.noProjectsDescEmpty}
               </p>
               <div className="pt-2">
                 <Link
@@ -387,7 +389,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm border border-[#e5484d]/40"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Добавить репозиторий</span>
+                  <span>{t.home.addRepo}</span>
                 </Link>
               </div>
             </div>
@@ -401,7 +403,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           {/* Role Filter Chips */}
           {allRoles.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-              <span className="text-[#8a92a3] mr-1">Специфика:</span>
+              <span className="text-[#8a92a3] mr-1">{t.home.specificRole}</span>
               <Link
                 href={`/?tab=looking${language ? `&lang=${encodeURIComponent(language)}` : ""}`}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors shrink-0 ${
@@ -410,7 +412,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                     : "bg-[#0f1117] border border-[#1d212b] text-[#8a92a3] hover:border-[#2e3444] hover:text-white"
                 }`}
               >
-                Все ({lookingCount})
+                {t.home.allRoles} ({lookingCount})
               </Link>
               {allRoles.map((role) => {
                 const isActive = roleFilter.toLowerCase() === role.toLowerCase();
@@ -437,7 +439,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           {filteredLookingProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredLookingProjects.map((project) => (
-                <ContributorCard key={project.id} project={project} />
+                <ContributorCard key={project.id} project={project} locale={locale} />
               ))}
             </div>
           ) : (
@@ -446,10 +448,10 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <Code2 className="w-5 h-5" />
               </div>
               <div className="text-sm font-semibold text-white">
-                Пока нет активных объявлений
+                {t.home.noLookingTitle}
               </div>
               <p className="text-xs text-[#8a92a3] max-w-sm mx-auto">
-                Ни один автор пока не разместил объявление о поиске контрибьюторов по выбранным фильтрам. Добавьте свой проект и найдите команду.
+                {t.home.noLookingDesc}
               </p>
               <div className="pt-2">
                 <Link
@@ -457,7 +459,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#e5484d] hover:bg-[#cc3e43] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm border border-[#e5484d]/40"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Добавить проект</span>
+                  <span>{t.home.addProject}</span>
                 </Link>
               </div>
             </div>
@@ -472,7 +474,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             {/* Stack Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-[#586071] font-mono mr-1">Стек:</span>
+              <span className="text-[#586071] font-mono mr-1">{t.home.stackLabel}</span>
               <Link
                 href={`/?tab=devs${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}`}
                 className={`px-2.5 py-1 rounded-md transition-colors shrink-0 ${
@@ -481,7 +483,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                     : "bg-[#0f1117] border border-[#1d212b] text-[#8a92a3] hover:text-white"
                 }`}
               >
-                Все
+                {t.home.allStack}
               </Link>
               {availableLanguages.map((lang) => {
                 const isActive = language.toLowerCase() === lang.toLowerCase();
@@ -513,7 +515,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                     : "text-[#8a92a3] hover:text-white"
                 }`}
               >
-                Все
+                {t.home.statusAll}
               </Link>
               <Link
                 href={`/?tab=devs&status=open${language ? `&lang=${encodeURIComponent(language)}` : ""}`}
@@ -523,7 +525,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                     : "text-[#8a92a3] hover:text-white"
                 }`}
               >
-                Открыты ({openDevsCount})
+                {t.home.statusOpen} ({openDevsCount})
               </Link>
               <Link
                 href={`/?tab=devs&status=mentor${language ? `&lang=${encodeURIComponent(language)}` : ""}`}
@@ -533,7 +535,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                     : "text-[#8a92a3] hover:text-white"
                 }`}
               >
-                Менторы
+                {t.home.statusMentor}
               </Link>
             </div>
           </div>
@@ -542,7 +544,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           {devs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {devs.map((dev) => (
-                <DeveloperCard key={dev.login} dev={dev} />
+                <DeveloperCard key={dev.login} dev={dev} locale={locale} />
               ))}
             </div>
           ) : (
@@ -551,10 +553,10 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <Users className="w-5 h-5" />
               </div>
               <div className="text-sm font-semibold text-white">
-                Разработчики не найдены
+                {t.home.noDevsTitle}
               </div>
               <p className="text-xs text-[#8a92a3] max-w-sm mx-auto">
-                По выбранным фильтрам пока нет разработчиков. Сбросьте фильтры или станьте первым, настроив статус доступности.
+                {t.home.noDevsDesc}
               </p>
             </div>
           )}

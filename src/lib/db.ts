@@ -1,8 +1,19 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
-const url = process.env.TURSO_DATABASE_URL || (process.env.VERCEL ? "file:/tmp/oss_hub.db" : "file:oss_hub.db");
-const authToken = process.env.TURSO_AUTH_TOKEN;
+const useLocal =
+  process.env.LOCAL_DB === "true" ||
+  process.env.USE_LOCAL_DB === "true";
+
+const rawUrl =
+  useLocal
+    ? (process.env.VERCEL ? "file:/tmp/oss_hub.db" : "file:oss_hub.db")
+    : process.env.TURSO_DATABASE_URL ||
+      (process.env.VERCEL ? "file:/tmp/oss_hub.db" : "file:oss_hub.db");
+
+const isFile = rawUrl.startsWith("file:");
+const url = rawUrl;
+const authToken = isFile ? undefined : process.env.TURSO_AUTH_TOKEN;
 
 export const client = createClient({
   url,
@@ -38,13 +49,20 @@ export async function initDb() {
       contributor_tasks TEXT,
       quickstart_command TEXT,
       contact_url TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
       moderation_status TEXT DEFAULT 'approved',
       moderation_score INTEGER DEFAULT 100,
       moderation_flags TEXT DEFAULT '[]',
       moderation_reviewed_at INTEGER,
       moderation_reviewed_by TEXT,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      quickstart_command TEXT,
+      modes TEXT DEFAULT '["tasks","team","onboarding"]',
+      team_roles_data TEXT DEFAULT '[]',
+      architecture_map_data TEXT DEFAULT '[]',
+      env_example TEXT,
+      moderation_reason TEXT,
+      is_deleted INTEGER DEFAULT 0
     );
   `);
 
@@ -88,7 +106,10 @@ export async function initDb() {
       status TEXT DEFAULT 'pending',
       pr_url TEXT,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      internal_notes TEXT,
+      task_id TEXT,
+      source TEXT DEFAULT 'github'
     );
   `);
 
@@ -160,6 +181,13 @@ export async function initDb() {
     );
   `);
 
+  try {
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO admins (login, created_at) VALUES ('lonestill', ?)`,
+      args: [Date.now()],
+    });
+  } catch {}
+
   await client.execute(`
     CREATE TABLE IF NOT EXISTS user_profiles (
       login TEXT PRIMARY KEY,
@@ -172,6 +200,93 @@ export async function initDb() {
     );
   `);
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      actor_login TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      details TEXT,
+      created_at INTEGER NOT NULL
+    );
+  `);
+
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+  `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS project_complaints (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      project_slug TEXT NOT NULL,
+      reporter_login TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      resolution TEXT,
+      resolved_by TEXT,
+      created_at INTEGER NOT NULL,
+      resolved_at INTEGER
+    );
+  `);
+
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_complaints_project ON project_complaints(project_id);
+  `);
+
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_status TEXT DEFAULT 'approved';`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_score INTEGER DEFAULT 100;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_flags TEXT DEFAULT '[]';`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_reviewed_at INTEGER;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_reviewed_by TEXT;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN moderation_reason TEXT;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE projects ADD COLUMN is_deleted INTEGER DEFAULT 0;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE task_claims ADD COLUMN internal_notes TEXT;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE task_claims ADD COLUMN task_id TEXT;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE task_claims ADD COLUMN source TEXT DEFAULT 'github';`);
+  } catch {}
+  try {
+    await client.execute(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_claim ON task_claims(project_id, issue_number, user_login) WHERE issue_number > 0 AND status IN ('pending', 'assigned');`
+    );
+  } catch {}
+  try {
+    await client.execute(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_task_claim ON task_claims(project_id, task_id, user_login) WHERE task_id IS NOT NULL AND status IN ('pending', 'assigned');`
+    );
+  } catch {}
+  try {
+    await client.execute(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_single_assignee_issue ON task_claims(project_id, issue_number) WHERE issue_number > 0 AND status = 'assigned';`
+    );
+  } catch {}
+  try {
+    await client.execute(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_single_assignee_task ON task_claims(project_id, task_id) WHERE task_id IS NOT NULL AND status = 'assigned';`
+    );
+  } catch {}
+
   isInitialized = true;
 }
+
 

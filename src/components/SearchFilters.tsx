@@ -9,6 +9,7 @@ import {
   appendOrReplaceFilterToken,
   FilterChip,
 } from "@/lib/search-query";
+import { useLanguage } from "@/lib/i18n/context";
 
 interface SearchFiltersProps {
   activeSearch?: string;
@@ -27,13 +28,16 @@ export function SearchFilters({
 }: SearchFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const [isPending, startTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchValue, setSearchValue] = useState(activeSearch);
+  const [prevActiveSearch, setPrevActiveSearch] = useState(activeSearch);
 
-  useEffect(() => {
+  if (prevActiveSearch !== activeSearch) {
+    setPrevActiveSearch(activeSearch);
     setSearchValue(activeSearch);
-  }, [activeSearch]);
+  }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -121,7 +125,7 @@ export function SearchFilters({
     activeChips.unshift({
       key: "language",
       rawToken: activeLanguage,
-      label: "Язык",
+      label: t.search.langLabel,
       value: activeLanguage,
     });
   }
@@ -129,8 +133,8 @@ export function SearchFilters({
     activeChips.push({
       key: "isLooking",
       rawToken: "is:looking",
-      label: "Статус",
-      value: "Ищут участников",
+      label: t.search.statusLabel,
+      value: t.search.lookingForMembers,
     });
   }
 
@@ -143,7 +147,7 @@ export function SearchFilters({
           ref={searchInputRef}
           type="text"
           value={searchValue}
-          placeholder="Поиск или фильтры: @language:rust, stars:>5, owner:lonestill, is:looking..."
+          placeholder={t.search.placeholder}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full bg-transparent py-1.5 text-xs text-white placeholder-[#586071] focus:outline-none"
         />
@@ -154,7 +158,7 @@ export function SearchFilters({
               type="button"
               onClick={() => handleSearchChange("")}
               className="p-1 rounded text-[#8a92a3] hover:text-white hover:bg-white/5 transition-colors"
-              title="Очистить строку поиска"
+              title={t.search.clearSearch}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -162,7 +166,7 @@ export function SearchFilters({
 
           <div className="pointer-events-none">
             {isPending ? (
-              <span className="text-[11px] text-[#8a92a3] font-mono">поиск...</span>
+              <span className="text-[11px] text-[#8a92a3] font-mono">{t.search.searching}</span>
             ) : (
               <kbd className="px-1.5 py-0.5 text-[10px] text-[#8a92a3] bg-white/5 border border-white/10 rounded font-mono">
                 /
@@ -177,7 +181,7 @@ export function SearchFilters({
         <div className="flex items-center gap-2 flex-wrap pt-0.5">
           <span className="text-[11px] text-[#8a92a3] flex items-center gap-1 font-mono">
             <SlidersHorizontal className="w-3 h-3 text-[#e5484d]" />
-            <span>Активные фильтры:</span>
+            <span>{t.search.activeFilters}</span>
           </span>
 
           {activeChips.map((chip, idx) => (
@@ -191,7 +195,7 @@ export function SearchFilters({
                 type="button"
                 onClick={() => removeFilter(chip)}
                 className="text-[#8a92a3] hover:text-white hover:bg-white/10 rounded p-0.5 transition-colors"
-                title={`Удалить фильтр ${chip.label}`}
+                title={`${t.search.deleteFilterTitle} ${chip.label}`}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -203,7 +207,7 @@ export function SearchFilters({
             onClick={clearAllFilters}
             className="text-[11px] text-[#8a92a3] hover:text-[#e5484d] transition-colors underline underline-offset-2 ml-1"
           >
-            Сбросить всё
+            {t.search.resetAll}
           </button>
         </div>
       )}
@@ -212,7 +216,7 @@ export function SearchFilters({
       <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[#8a92a3]">
         <span className="flex items-center gap-1 text-[#586071] font-mono mr-0.5">
           <Terminal className="w-3 h-3 text-[#586071]" />
-          <span>Быстрые фильтры:</span>
+          <span>{t.search.quickFilters}</span>
         </span>
 
         {availableLanguages.map((lang) => {
@@ -282,7 +286,7 @@ export function SearchFilters({
                 : "text-[#8a92a3] hover:text-white"
             }`}
           >
-            По звёздам
+            {t.search.byStars}
           </button>
 
           <button
@@ -296,7 +300,7 @@ export function SearchFilters({
                 : "text-[#8a92a3] hover:text-white"
             }`}
           >
-            Свежие
+            {t.search.newest}
           </button>
 
           <button
@@ -321,14 +325,14 @@ export function SearchFilters({
                 effectiveLooking ? "bg-white" : "bg-[#e5484d]"
               }`}
             />
-            <span>Ищут участников</span>
+            <span>{t.search.lookingForMembers}</span>
           </button>
         </div>
 
         {/* Real Available Languages Filter Buttons */}
         {availableLanguages.length > 0 && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-            <span className="text-[11px] text-[#586071] mr-1 hidden sm:inline">Стек:</span>
+            <span className="text-[11px] text-[#586071] mr-1 hidden sm:inline">{t.home.stackLabel}</span>
             <button
               type="button"
               onClick={() => {
@@ -342,7 +346,7 @@ export function SearchFilters({
                   : "bg-[#0f1117] border border-[#1d212b] text-[#8a92a3] hover:border-[#2e3444] hover:text-white"
               }`}
             >
-              Все ({availableLanguages.length})
+              {t.search.allLanguagesCount} ({availableLanguages.length})
             </button>
             {availableLanguages.map((lang) => {
               const isActive = effectiveLanguage.toLowerCase() === lang.toLowerCase();

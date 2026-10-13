@@ -2,12 +2,14 @@ import { client, initDb } from "./db";
 import { TeamApplication } from "./types";
 export type { TeamApplication } from "./types";
 
-export interface TaskClaim {
+export interface PublicTaskClaim {
   id: string;
   project_id: string;
   project_slug: string;
   issue_number: number;
   issue_title: string;
+  task_id?: string | null;
+  source?: "github" | "manual";
   user_login: string;
   user_name: string | null;
   user_avatar: string | null;
@@ -17,6 +19,13 @@ export interface TaskClaim {
   created_at: number;
   updated_at: number;
   messages_count?: number;
+  last_message_sender?: string | null;
+  last_message_is_author?: boolean | null;
+  last_message_content?: string | null;
+}
+
+export interface TaskClaim extends PublicTaskClaim {
+  internal_notes?: string | null;
 }
 
 export interface TaskMessage {
@@ -36,23 +45,27 @@ export async function createTaskClaim(params: {
   projectSlug: string;
   issueNumber: number;
   issueTitle: string;
+  taskId?: string | null;
+  source?: "github" | "manual";
   userLogin: string;
   userName?: string | null;
   userAvatar?: string | null;
   pitch: string;
-}): Promise<TaskClaim> {
+}): Promise<PublicTaskClaim> {
   await initDb();
   const id = `claim_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const now = Date.now();
+  const taskId = params.taskId || (params.source === "github" ? `gh_${params.issueNumber}` : null);
+  const source = params.source || "github";
 
   await client.execute({
     sql: `
       INSERT INTO task_claims (
         id, project_id, project_slug, issue_number, issue_title,
-        user_login, user_name, user_avatar, pitch, status,
+        task_id, source, user_login, user_name, user_avatar, pitch, status,
         pr_url, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?)
     `,
     args: [
       id,
@@ -60,6 +73,8 @@ export async function createTaskClaim(params: {
       params.projectSlug,
       params.issueNumber,
       params.issueTitle,
+      taskId,
+      source,
       params.userLogin,
       params.userName || null,
       params.userAvatar || null,
@@ -75,6 +90,8 @@ export async function createTaskClaim(params: {
     project_slug: params.projectSlug,
     issue_number: params.issueNumber,
     issue_title: params.issueTitle,
+    task_id: taskId,
+    source,
     user_login: params.userLogin,
     user_name: params.userName || null,
     user_avatar: params.userAvatar || null,
@@ -86,11 +103,19 @@ export async function createTaskClaim(params: {
   };
 }
 
-export async function getClaimsByProject(projectId: string): Promise<TaskClaim[]> {
+export async function getClaimsByProject(
+  projectId: string
+): Promise<PublicTaskClaim[]> {
   await initDb();
   const result = await client.execute({
     sql: `
-      SELECT tc.*, COUNT(tm.id) as messages_count
+      SELECT tc.id, tc.project_id, tc.project_slug, tc.issue_number, tc.issue_title,
+             tc.task_id, tc.source, tc.user_login, tc.user_name, tc.user_avatar,
+             tc.pitch, tc.status, tc.pr_url, tc.created_at, tc.updated_at,
+        COUNT(tm.id) as messages_count,
+        (SELECT sender_login FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_sender,
+        (SELECT is_author FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_is_author,
+        (SELECT content FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_content
       FROM task_claims tc
       LEFT JOIN task_messages tm ON tc.id = tm.claim_id
       WHERE tc.project_id = ?
@@ -106,6 +131,8 @@ export async function getClaimsByProject(projectId: string): Promise<TaskClaim[]
     project_slug: String(row.project_slug),
     issue_number: Number(row.issue_number),
     issue_title: String(row.issue_title),
+    task_id: row.task_id ? String(row.task_id) : null,
+    source: (row.source as "github" | "manual") || "github",
     user_login: String(row.user_login),
     user_name: row.user_name ? String(row.user_name) : null,
     user_avatar: row.user_avatar ? String(row.user_avatar) : null,
@@ -115,14 +142,66 @@ export async function getClaimsByProject(projectId: string): Promise<TaskClaim[]
     created_at: Number(row.created_at),
     updated_at: Number(row.updated_at),
     messages_count: Number(row.messages_count || 0),
+    last_message_sender: row.last_message_sender ? String(row.last_message_sender) : null,
+    last_message_is_author: row.last_message_is_author !== null && row.last_message_is_author !== undefined ? Boolean(row.last_message_is_author) : null,
+    last_message_content: row.last_message_content ? String(row.last_message_content) : null,
   }));
 }
 
-export async function getClaimsByUser(userLogin: string): Promise<TaskClaim[]> {
+export async function getMaintainerClaimsByProject(
+  projectId: string
+): Promise<TaskClaim[]> {
   await initDb();
   const result = await client.execute({
     sql: `
-      SELECT tc.*, COUNT(tm.id) as messages_count
+      SELECT tc.id, tc.project_id, tc.project_slug, tc.issue_number, tc.issue_title,
+             tc.task_id, tc.source, tc.user_login, tc.user_name, tc.user_avatar,
+             tc.pitch, tc.status, tc.pr_url, tc.internal_notes, tc.created_at, tc.updated_at,
+        COUNT(tm.id) as messages_count,
+        (SELECT sender_login FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_sender,
+        (SELECT is_author FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_is_author,
+        (SELECT content FROM task_messages WHERE claim_id = tc.id ORDER BY created_at DESC LIMIT 1) as last_message_content
+      FROM task_claims tc
+      LEFT JOIN task_messages tm ON tc.id = tm.claim_id
+      WHERE tc.project_id = ?
+      GROUP BY tc.id
+      ORDER BY tc.created_at DESC
+    `,
+    args: [projectId],
+  });
+
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    project_id: String(row.project_id),
+    project_slug: String(row.project_slug),
+    issue_number: Number(row.issue_number),
+    issue_title: String(row.issue_title),
+    task_id: row.task_id ? String(row.task_id) : null,
+    source: (row.source as "github" | "manual") || "github",
+    user_login: String(row.user_login),
+    user_name: row.user_name ? String(row.user_name) : null,
+    user_avatar: row.user_avatar ? String(row.user_avatar) : null,
+    pitch: String(row.pitch),
+    status: (row.status as any) || "pending",
+    pr_url: row.pr_url ? String(row.pr_url) : null,
+    internal_notes: row.internal_notes ? String(row.internal_notes) : null,
+    created_at: Number(row.created_at),
+    updated_at: Number(row.updated_at),
+    messages_count: Number(row.messages_count || 0),
+    last_message_sender: row.last_message_sender ? String(row.last_message_sender) : null,
+    last_message_is_author: row.last_message_is_author !== null && row.last_message_is_author !== undefined ? Boolean(row.last_message_is_author) : null,
+    last_message_content: row.last_message_content ? String(row.last_message_content) : null,
+  }));
+}
+
+export async function getClaimsByUser(userLogin: string): Promise<PublicTaskClaim[]> {
+  await initDb();
+  const result = await client.execute({
+    sql: `
+      SELECT tc.id, tc.project_id, tc.project_slug, tc.issue_number, tc.issue_title,
+             tc.task_id, tc.source, tc.user_login, tc.user_name, tc.user_avatar,
+             tc.pitch, tc.status, tc.pr_url, tc.created_at, tc.updated_at,
+             COUNT(tm.id) as messages_count
       FROM task_claims tc
       LEFT JOIN task_messages tm ON tc.id = tm.claim_id
       WHERE LOWER(tc.user_login) = LOWER(?)
@@ -138,6 +217,8 @@ export async function getClaimsByUser(userLogin: string): Promise<TaskClaim[]> {
     project_slug: String(row.project_slug),
     issue_number: Number(row.issue_number),
     issue_title: String(row.issue_title),
+    task_id: row.task_id ? String(row.task_id) : null,
+    source: (row.source as "github" | "manual") || "github",
     user_login: String(row.user_login),
     user_name: row.user_name ? String(row.user_name) : null,
     user_avatar: row.user_avatar ? String(row.user_avatar) : null,
@@ -166,12 +247,15 @@ export async function getClaimById(claimId: string): Promise<TaskClaim | null> {
     project_slug: String(row.project_slug),
     issue_number: Number(row.issue_number),
     issue_title: String(row.issue_title),
+    task_id: row.task_id ? String(row.task_id) : null,
+    source: (row.source as "github" | "manual") || "github",
     user_login: String(row.user_login),
     user_name: row.user_name ? String(row.user_name) : null,
     user_avatar: row.user_avatar ? String(row.user_avatar) : null,
     pitch: String(row.pitch),
     status: (row.status as any) || "pending",
     pr_url: row.pr_url ? String(row.pr_url) : null,
+    internal_notes: row.internal_notes ? String(row.internal_notes) : null,
     created_at: Number(row.created_at),
     updated_at: Number(row.updated_at),
   };
@@ -180,22 +264,60 @@ export async function getClaimById(claimId: string): Promise<TaskClaim | null> {
 export async function updateClaimStatus(
   claimId: string,
   status: "pending" | "assigned" | "completed" | "rejected",
-  prUrl?: string | null
+  prUrl?: string | null,
+  internalNotes?: string | null
 ): Promise<void> {
   await initDb();
   const now = Date.now();
+  const cur = await getClaimById(claimId);
+  if (!cur) throw new Error("Claim not found");
 
-  if (prUrl !== undefined) {
-    await client.execute({
-      sql: `UPDATE task_claims SET status = ?, pr_url = ?, updated_at = ? WHERE id = ?`,
-      args: [status, prUrl, now, claimId],
-    });
-  } else {
-    await client.execute({
-      sql: `UPDATE task_claims SET status = ?, updated_at = ? WHERE id = ?`,
-      args: [status, now, claimId],
-    });
+  // Guarantee single assignee:
+  // When assigning, atomically reject ALL other claims on this issue/task (both pending and previously assigned)
+  if (status === "assigned") {
+    if (cur.task_id) {
+      await client.execute({
+        sql: `UPDATE task_claims SET status = 'rejected', updated_at = ? WHERE project_id = ? AND task_id = ? AND id != ? AND status IN ('pending', 'assigned')`,
+        args: [now, cur.project_id, cur.task_id, claimId],
+      });
+    }
+    if (cur.issue_number && cur.issue_number > 0) {
+      await client.execute({
+        sql: `UPDATE task_claims SET status = 'rejected', updated_at = ? WHERE project_id = ? AND issue_number = ? AND id != ? AND status IN ('pending', 'assigned')`,
+        args: [now, cur.project_id, cur.issue_number, claimId],
+      });
+    }
   }
+
+  const updates: string[] = ["status = ?", "updated_at = ?"];
+  const args: any[] = [status, now];
+
+  // If status is pending (unassigned), ALWAYS wipe pr_url to NULL in DB!
+  if (status === "pending" || prUrl === null) {
+    updates.push("pr_url = NULL");
+  } else if (prUrl !== undefined) {
+    updates.push("pr_url = ?");
+    args.push(prUrl);
+  }
+
+  if (internalNotes !== undefined) {
+    updates.push("internal_notes = ?");
+    args.push(internalNotes);
+  }
+
+  args.push(claimId);
+  await client.execute({
+    sql: `UPDATE task_claims SET ${updates.join(", ")} WHERE id = ?`,
+    args,
+  });
+}
+
+export async function updateClaimInternalNotes(claimId: string, notes: string): Promise<void> {
+  await initDb();
+  await client.execute({
+    sql: `UPDATE task_claims SET internal_notes = ?, updated_at = ? WHERE id = ?`,
+    args: [notes, Date.now(), claimId],
+  });
 }
 
 export async function cancelTaskClaim(claimId: string): Promise<void> {

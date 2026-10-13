@@ -1,83 +1,61 @@
 "use client";
 
 import { NavSection } from "./types";
+import { useLanguage } from "@/lib/i18n/context";
 import {
-  TrendingUp,
-  Sparkles,
-  Briefcase,
-  UserCheck,
-  Terminal,
+  LayoutDashboard,
+  CheckSquare,
+  Users2,
   Settings,
 } from "lucide-react";
 
 interface CrmSidebarProps {
   activeSection: NavSection;
   onSelectSection: (section: NavSection) => void;
-  totalLeads: number;
-  pendingCount: number;
-  inProgressCount: number;
-  acceptedCount: number;
+  attentionCount: number;
   tasksCount: number;
-  rolesCount: number;
-  rosterCount: number;
+  teamCount: number;
 }
 
 export function CrmSidebar({
   activeSection,
   onSelectSection,
-  totalLeads,
-  pendingCount,
-  inProgressCount,
-  acceptedCount,
+  attentionCount,
   tasksCount,
-  rolesCount,
-  rosterCount,
+  teamCount,
 }: CrmSidebarProps) {
-  return (
-    <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[#30363d] bg-[#0d1117] p-3 sm:p-4 space-y-4 shrink-0">
-      {/* Quick Metrics Widget */}
-      <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
-        <span className="text-[10px] font-mono uppercase text-[#8b949e] block font-semibold">
-          Метрики воронки
-        </span>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <span className="text-[11px] text-[#8b949e] block">Отклики</span>
-            <span className="font-bold text-white font-mono text-sm">{totalLeads}</span>
-          </div>
-          <div>
-            <span className="text-[11px] text-[#8b949e] block">Новые</span>
-            <span className="font-bold text-[#f78166] font-mono text-sm">{pendingCount}</span>
-          </div>
-          <div>
-            <span className="text-[11px] text-[#8b949e] block">В работе</span>
-            <span className="font-bold text-[#d29922] font-mono text-sm">{inProgressCount}</span>
-          </div>
-          <div>
-            <span className="text-[11px] text-[#8b949e] block">В команде</span>
-            <span className="font-bold text-[#38bdf8] font-mono text-sm">{acceptedCount}</span>
-          </div>
-        </div>
-      </div>
+  const { t } = useLanguage();
 
-      {/* Navigation Links */}
-      <nav className="space-y-1 text-xs font-medium">
+  return (
+    <aside className="w-full md:w-60 border-b md:border-b-0 md:border-r border-[#21262d] bg-[#0d1117] p-3 sm:p-4 flex flex-col justify-between shrink-0 select-none">
+      {/* Top Main Navigation */}
+      <div className="space-y-1">
+        <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-[#8b949e] font-semibold mb-1">
+          {t.crm.nav.overview}
+        </div>
+
         <button
           type="button"
-          onClick={() => onSelectSection("pipeline")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
-            activeSection === "pipeline"
-              ? "bg-[#21262d] text-white font-semibold"
+          onClick={() => onSelectSection("overview")}
+          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
+            activeSection === "overview"
+              ? "bg-[#e5484d] text-white font-semibold shadow-sm shadow-[#e5484d]/20"
               : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-[#f78166]" />
-            <span>Воронка (Pipeline)</span>
+          <div className="flex items-center gap-2.5">
+            <LayoutDashboard className="w-4 h-4" />
+            <span>{t.crm.nav.overview}</span>
           </div>
-          {pendingCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-[#e5484d] text-white font-mono text-[10px] font-bold">
-              {pendingCount}
+          {attentionCount > 0 && (
+            <span
+              className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] font-bold ${
+                activeSection === "overview"
+                  ? "bg-black/30 text-white"
+                  : "bg-[#e5484d] text-white animate-pulse"
+              }`}
+            >
+              {attentionCount}
             </span>
           )}
         </button>
@@ -85,17 +63,23 @@ export function CrmSidebar({
         <button
           type="button"
           onClick={() => onSelectSection("tasks")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
+          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
             activeSection === "tasks"
-              ? "bg-[#21262d] text-white font-semibold"
+              ? "bg-[#e5484d] text-white font-semibold shadow-sm shadow-[#e5484d]/20"
               : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#e5484d]" />
-            <span>Бэклог задач</span>
+          <div className="flex items-center gap-2.5">
+            <CheckSquare className="w-4 h-4" />
+            <span>{t.crm.nav.tasks}</span>
           </div>
-          <span className="px-1.5 py-0.2 rounded-full bg-[#161b22] font-mono text-[10px] text-[#8b949e]">
+          <span
+            className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${
+              activeSection === "tasks"
+                ? "bg-black/30 text-white"
+                : "bg-[#161b22] text-[#8b949e]"
+            }`}
+          >
             {tasksCount}
           </span>
         </button>
@@ -103,69 +87,43 @@ export function CrmSidebar({
         <button
           type="button"
           onClick={() => onSelectSection("team")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
+          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
             activeSection === "team"
-              ? "bg-[#21262d] text-white font-semibold"
+              ? "bg-[#e5484d] text-white font-semibold shadow-sm shadow-[#e5484d]/20"
               : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-[#38bdf8]" />
-            <span>Вакансии и роли</span>
+          <div className="flex items-center gap-2.5">
+            <Users2 className="w-4 h-4" />
+            <span>{t.crm.nav.team}</span>
           </div>
-          <span className="px-1.5 py-0.2 rounded-full bg-[#161b22] font-mono text-[10px] text-[#8b949e]">
-            {rolesCount}
+          <span
+            className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${
+              activeSection === "team"
+                ? "bg-black/30 text-white"
+                : "bg-[#161b22] text-[#8b949e]"
+            }`}
+          >
+            {teamCount}
           </span>
         </button>
+      </div>
 
-        <button
-          type="button"
-          onClick={() => onSelectSection("roster")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
-            activeSection === "roster"
-              ? "bg-[#21262d] text-white font-semibold"
-              : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-[#3fb950]" />
-            <span>Ростер участников</span>
-          </div>
-          <span className="px-1.5 py-0.2 rounded-full bg-[#161b22] font-mono text-[10px] text-[#8b949e]">
-            {rosterCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectSection("onboarding")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
-            activeSection === "onboarding"
-              ? "bg-[#21262d] text-white font-semibold"
-              : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-[#3fb950]" />
-            <span>Онбординг & .env</span>
-          </div>
-        </button>
-
+      {/* Bottom Sidebar: Settings */}
+      <div className="pt-4 border-t border-[#21262d] mt-6 md:mt-auto">
         <button
           type="button"
           onClick={() => onSelectSection("settings")}
-          className={`w-full px-3 py-2 rounded-md flex items-center justify-between transition-colors ${
+          className={`w-full px-3 py-2.5 rounded-xl flex items-center gap-2.5 text-xs transition-all ${
             activeSection === "settings"
-              ? "bg-[#21262d] text-white font-semibold"
+              ? "bg-[#21262d] text-white font-semibold border border-[#30363d]"
               : "text-[#8b949e] hover:text-white hover:bg-[#161b22]"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            <span>Конфиг репозитория</span>
-          </div>
+          <Settings className="w-4 h-4" />
+          <span>{t.crm.nav.settings}</span>
         </button>
-      </nav>
+      </div>
     </aside>
   );
 }

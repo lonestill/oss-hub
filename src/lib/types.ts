@@ -18,7 +18,16 @@ export interface ContributorTask {
   difficulty: "easy" | "medium" | "hard";
   tags: string[];
   estimated_time?: string;
-  status?: "open" | "in_progress" | "closed";
+  status?: "open" | "in_progress" | "review" | "completed" | "cancelled" | "closed";
+  assignee?: {
+    login: string;
+    name?: string | null;
+    avatar?: string | null;
+  } | null;
+  issue_number?: number;
+  source?: "manual" | "github";
+  created_at?: number;
+  updated_at?: number;
 }
 
 export interface Project {
@@ -52,7 +61,7 @@ export interface Project {
   comments_count?: number;
   claims_count?: number;
   team_apps_count?: number;
-  moderation_status?: "approved" | "pending" | "rejected";
+  moderation_status?: "approved" | "pending" | "rejected" | "hidden";
   moderation_score?: number;
   moderation_flags?: {
     level: "danger" | "warning" | "info";
@@ -61,7 +70,33 @@ export interface Project {
   }[];
   moderation_reviewed_at?: number | null;
   moderation_reviewed_by?: string | null;
+  moderation_reason?: string | null;
+  is_deleted?: boolean;
 }
+
+export interface AuditLog {
+  id: string;
+  actor_login: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details?: string | null;
+  created_at: number;
+}
+
+export interface ProjectComplaint {
+  id: string;
+  project_id: string;
+  project_slug: string;
+  reporter_login: string;
+  reason: string;
+  status: "pending" | "resolved" | "dismissed";
+  resolution?: string | null;
+  resolved_by?: string | null;
+  created_at: number;
+  resolved_at?: number | null;
+}
+
 
 export interface TeamApplication {
   id: string;

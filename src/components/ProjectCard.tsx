@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Star, GitFork, ExternalLink, MessageSquare, CircleDot } from "lucide-react";
+import { Star, GitFork, ExternalLink, CircleDot } from "lucide-react";
 import { Project } from "@/lib/types";
+import { Locale } from "@/lib/i18n/types";
 
 const languageColors: Record<string, string> = {
   typescript: "#3178c6",
@@ -17,7 +18,14 @@ const languageColors: Record<string, string> = {
   ruby: "#701516",
 };
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({
+  project,
+  locale = "ru",
+}: {
+  project: Project;
+  locale?: Locale;
+}) {
+  const isRu = locale !== "en";
   const langKey = project.language?.toLowerCase() || "";
   const langColor = languageColors[langKey] || "#8a92a3";
 
@@ -59,14 +67,20 @@ export function ProjectCard({ project }: { project: Project }) {
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#e5484d]/10 text-[#e5484d] text-[11px] font-medium border border-[#e5484d]/20 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-[#e5484d] animate-pulse"></span>
               {project.parsed_tasks && project.parsed_tasks.length > 0
-                ? `${project.parsed_tasks.length} ${
-                    project.parsed_tasks.length === 1
-                      ? "задача"
-                      : project.parsed_tasks.length < 5
-                      ? "задачи"
-                      : "задач"
-                  }`
-                : "Ищут людей"}
+                ? isRu
+                  ? `${project.parsed_tasks.length} ${
+                      project.parsed_tasks.length === 1
+                        ? "задача"
+                        : project.parsed_tasks.length < 5
+                        ? "задачи"
+                        : "задач"
+                    }`
+                  : `${project.parsed_tasks.length} ${
+                      project.parsed_tasks.length === 1 ? "task" : "tasks"
+                    }`
+                : isRu
+                ? "Ищут людей"
+                : "Looking for team"}
             </span>
           )}
         </div>
@@ -81,7 +95,10 @@ export function ProjectCard({ project }: { project: Project }) {
 
         {/* Description */}
         <p className="text-xs text-[#8a92a3] line-clamp-2 mt-1.5 leading-relaxed min-h-[36px]">
-          {project.description || "Описание репозитория отсутствует."}
+          {project.description ||
+            (isRu
+              ? "Описание репозитория отсутствует."
+              : "No repository description provided.")}
         </p>
 
         {/* Roles Needed Chips */}
@@ -125,7 +142,10 @@ export function ProjectCard({ project }: { project: Project }) {
             <span className="font-mono">{project.forks}</span>
           </span>
           {project.open_issues > 0 && (
-            <span className="flex items-center gap-1 text-[#8a92a3]" title="Открытые Issues">
+            <span
+              className="flex items-center gap-1 text-[#8a92a3]"
+              title={isRu ? "Открытые Issues" : "Open Issues"}
+            >
               <CircleDot className="w-3.5 h-3.5 text-[#3fb950]" />
               <span className="font-mono">{project.open_issues}</span>
             </span>
@@ -137,7 +157,7 @@ export function ProjectCard({ project }: { project: Project }) {
             href={project.url}
             target="_blank"
             rel="noopener noreferrer"
-            title="Открыть на GitHub"
+            title={isRu ? "Открыть на GitHub" : "Open on GitHub"}
             className="text-[#8a92a3] hover:text-white transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -146,7 +166,7 @@ export function ProjectCard({ project }: { project: Project }) {
             href={`/projects/${project.slug}`}
             className="text-xs font-medium text-white hover:underline"
           >
-            Открыть →
+            {isRu ? "Открыть →" : "Open →"}
           </Link>
         </div>
       </div>
